@@ -1,0 +1,35 @@
+Player
+{
+    id: "string",
+    name: "string",
+    ready: "bool"
+    vote: "string"
+
+}
+Room
+{
+    id: "string",
+    code: "number (4digit)" 
+    players: [
+        player_a: {player},
+        ...
+        player_n: {player}
+    ]
+    maps: []
+    
+}
+Map
+{
+    id: "string",
+    tiles: [ 
+        tile_1_1: {tile},
+        ...,
+        tile_n_m: {tile}
+    ] (only changed tiles in order)
+}
+Tile{
+    position_x: "number",
+    position_y: "number",
+    occupation: "bool",
+    player: "player"   
+}
