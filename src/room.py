@@ -1,7 +1,9 @@
 from src.player import Player
+import uuid
 
 class Room(object):
     def __init__(self, master):
+        self.id = str(uuid.uuid4())
         self.master = master
         self.players = [master]
         self.ready = False
