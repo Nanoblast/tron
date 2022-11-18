@@ -1,19 +1,10 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from src.gameControl import GameControl
+
 app = Flask(__name__)
 api = Api(app)
 control = GameControl()
-
-class Player(Resource):
-    def get(self):
-        return {"data":"blank"}
-    def get(self, id):
-        return {"data":"id"}
-
-class Map(Resource):
-    def get(self):
-        return {"data":"blank"}
 
 @app.route('/player', methods=['GET'])
 def getPlayers():
@@ -35,14 +26,13 @@ def registerPlayer():
 class Tile(Resource):
     def get(self):
         return {"data":"blank"}
-
-class Room(Resource):
-    def get(self):
-        return {"data:":"blank"}
-
-api.add_resource(Map, "/map")
-api.add_resource(Tile, "/tile")
-api.add_resource(Room, "/room")
+@app.route('/room/create', methods=['POST'])
+def createRoom():
+    data = request.get_json()
+    if not 'player' in data:
+        return '', 403
+    newRoom = control.createRoom(data['player'])
+    return newRoom.jsonify()
 
 if  __name__ == "__main__":
     app.run(debug = True)
