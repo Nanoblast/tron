@@ -20,3 +20,7 @@ class GameControl():
         newRoom = RoomFactory.createRoom(master)
         self.rooms.append(newRoom)
         return newRoom
+    def joinRoom(self, room_id, player: Player):
+        for room in self.rooms:
+            if room.id == room_id:
+                return room.joinRoom(player)

@@ -26,5 +26,10 @@ class Room(object):
             'ready': self.ready,
             'players': players
         }
+    def joinRoom(self, player: Player):
+        if len(self.players) == 4:
+            return False
+        self.players.append(player)
+        return True
 
         
