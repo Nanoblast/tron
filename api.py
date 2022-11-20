@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from src.gameControl import GameControl
+import argparse
 
 app = Flask(__name__)
 api = Api(app)
@@ -23,9 +24,14 @@ def registerPlayer():
     player = control.createPlayer(name)
     return player.jsonify()
 
-class Tile(Resource):
-    def get(self):
-        return {"data":"blank"}
+@app.route('/room', methods=['GET'])
+def getRooms():
+    rooms = control.getRooms()
+    response = {'rooms': []}
+    for room in rooms:
+        response['rooms'].append(room.jsonify())
+    return response
+
 @app.route('/room/create', methods=['POST'])
 def createRoom():
     data = request.get_json()
@@ -33,6 +39,19 @@ def createRoom():
         return '', 403
     newRoom = control.createRoom(data['player'])
     return newRoom.jsonify()
-
+@app.route('/room/join', methods=['POST'])
+def joinRoom():
+    data = request.get_json()
+    response = str(control.joinRoom(data))
+    return {"success": response}
+@app.route('/room/leave', methods=['POST'])
+def leaveRoom():
+    data = request.get_json()
+    control.leaveRoom(data)
+    return ''
 if  __name__ == "__main__":
-    app.run(debug = True)
+    parser = argparse.ArgumentParser(description="Time server")
+    parser.add_argument('--port', type=int)
+    args = parser.parse_args()
+
+    app.run(host='127.0.0.1', port=args.port)

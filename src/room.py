@@ -21,6 +21,7 @@ class Room(object):
             players.append(player.jsonify())
         
         return {
+            'id': self.id,
             'master': self.master.jsonify(),
             'pin': self.password,
             'ready': self.ready,
@@ -31,5 +32,13 @@ class Room(object):
             return False
         self.players.append(player)
         return True
+    def leaveRoom(self, player: Player):
+        self.players.remove(player)
+
+    def hasPlayer(self, player: Player):
+        for p in self.players:
+            if player.id == p.id:
+                return True
+        return False
 
         
