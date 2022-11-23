@@ -23,6 +23,17 @@ class RoomModel(db.Model):
     players = db.Column(db.String, nullable=False)
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
+    
+class TileModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    x = db.Column(db.String, nullable=False)
+    y = db.Column(db.String, nullable=False)
+    occupied = db.Column(db.Boolean, nullable=False)
+    player = db.Column(db.String, nullable=True)
+
+class MapModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    tiles = db.Column(db.String, nullable=False)
 
 with app.app_context():
     db.create_all()
