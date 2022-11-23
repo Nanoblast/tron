@@ -68,15 +68,12 @@ class API(metaclass=Singleton):
         db.session.commit()
         return '', 201
 
-<<<<<<< HEAD
-    @app.route('/room', methods=['GET'])
-=======
     @app.route('/rooms', methods=['GET'])
->>>>>>> 88b6bed (Added room leaving function)
     @marshal_with(room_resourse_fields)
     def getRooms():
         result = RoomModel.query.all()
         return result
+    
     '''
     {
         "id": "f2cf0491-0ed5-46ab-bb8d-11c455b9e70f"
@@ -169,7 +166,7 @@ class API(metaclass=Singleton):
         leaving_player = PlayerModel.query.get(data['player']['id'])
         leaving_player = json.dumps(serializePlayer(leaving_player))
         if not leaving_player in players:
-            return 'Player is not in the room', 406
+            return 'Player is not ingi the room', 406
         players.remove(leaving_player)
         print(players)
         print(leaving_player)
@@ -177,7 +174,6 @@ class API(metaclass=Singleton):
         db.session.add(room)
         db.session.commit()
         return room
-
 
 player_put_args = reqparse.RequestParser()
 player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
