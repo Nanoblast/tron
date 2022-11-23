@@ -57,7 +57,7 @@ class API(metaclass=Singleton):
     def registerPlayer():
         data = request.get_json()
         if not 'name' in data:
-            return 'Missing name', 404
+            return 'Missing name', 406
         input_name = data['name']
         from src.model.player_model import PlayerModel
         player = PlayerModel(
@@ -68,10 +68,27 @@ class API(metaclass=Singleton):
         db.session.commit()
         return '', 201
 
+<<<<<<< HEAD
     @app.route('/room', methods=['GET'])
+=======
+    @app.route('/rooms', methods=['GET'])
+>>>>>>> 88b6bed (Added room leaving function)
     @marshal_with(room_resourse_fields)
     def getRooms():
         result = RoomModel.query.all()
+        return result
+    '''
+    {
+        "id": "f2cf0491-0ed5-46ab-bb8d-11c455b9e70f"
+    }
+    '''
+    @app.route('/room', methods=['GET'])
+    @marshal_with(room_resourse_fields)
+    def getRoom():
+        data = request.get_json()
+        if not data['id']:
+            return 'Missing room ID', 406
+        result = RoomModel.query.get(data['id'])
         return result
 
     '''
@@ -89,7 +106,7 @@ class API(metaclass=Singleton):
         data = request.get_json()
         #Room master must be in data
         if not 'player' in data:
-            return 'Missing room master.', 404
+            return 'Missing room master.', 406
         player = PlayerModel.query.get(data['player']['id'])
         room = RoomModel(
             id = str(uuid.uuid4()),
@@ -121,13 +138,13 @@ class API(metaclass=Singleton):
     def joinRoom():
         data = request.get_json()
         if not data['room']:
-            return 'Missing room information', 404
+            return 'Missing room information', 406
         if not data['player']:
-            return 'Missing player information', 404
+            return 'Missing player information', 406
         room_id = data['room']['id']
         room = RoomModel.query.get(room_id)
         players = room.players.split(';')
-        new_player = PlayerModel.query.get(not data['player']['id'])
+        new_player = PlayerModel.query.get(data['player']['id'])
         new_player = json.dumps(serializePlayer(new_player))
         #Játékos beléphet még több szobába !!!!!!
         if new_player in players:
@@ -137,12 +154,29 @@ class API(metaclass=Singleton):
         db.session.add(room)
         db.session.commit()
         return room
-        
+
     @app.route('/room/leave', methods=['POST'])
+    @marshal_with(room_resourse_fields)
     def leaveRoom():
         data = request.get_json()
-        current_app._control.leaveRoom(data)
-        return ''
+        if not data['player']:
+            return 'Missing player information', 406
+        if not data['room']:
+            return 'Missing room information', 406
+        room_id = data['room']['id']
+        room = RoomModel.query.get(room_id)
+        players = room.players.split(';')
+        leaving_player = PlayerModel.query.get(data['player']['id'])
+        leaving_player = json.dumps(serializePlayer(leaving_player))
+        if not leaving_player in players:
+            return 'Player is not in the room', 406
+        players.remove(leaving_player)
+        print(players)
+        print(leaving_player)
+        room.players = ";".join(players)
+        db.session.add(room)
+        db.session.commit()
+        return room
 
 
 player_put_args = reqparse.RequestParser()
