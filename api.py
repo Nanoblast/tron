@@ -36,8 +36,6 @@ room_resourse_fields = {
     'ready': fields.Boolean,
     'passwd': fields.Integer
 }
-#with app.app_context():
-#    db.create_all()
 
 @marshal_with(player_resouce_fields)
 def serializePlayer(player: PlayerModel):
@@ -49,7 +47,6 @@ class API(metaclass=Singleton):
     def getPlayers():
         result = PlayerModel.query.all()
         return result
-
 
     '''
     {
@@ -156,4 +153,4 @@ if  __name__ == "__main__":
     parser.add_argument('--port', type=int)
     args = parser.parse_args()
     
-    app.run(host='127.0.0.1')
+    app.run(host='127.0.0.1', port=args.port)
