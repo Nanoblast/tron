@@ -86,7 +86,6 @@ class API(metaclass=Singleton):
         if not 'name' in data:
             return 'Missing name', 406
         input_name = data['name']
-        from src.model.player_model import PlayerModel
         player = PlayerModel(
             id   = str(uuid.uuid4()),
             name = input_name
