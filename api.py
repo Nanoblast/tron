@@ -228,7 +228,6 @@ class API(metaclass=Singleton):
                     y = j+1,
                     occupied = False
                 ))
-        print(len(tiles))
         map = MapModel(
             id = uuid.uuid4(),
             tiles = json.dumps((tiles))
