@@ -69,6 +69,7 @@ class API(metaclass=Singleton):
         return '', 201
 
     @app.route('/room', methods=['GET'])
+    @marshal_with(room_resourse_fields)
     def getRooms():
         result = RoomModel.query.all()
         return result
