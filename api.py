@@ -1,57 +1,130 @@
-from flask import Flask, jsonify, request
-from flask_restful import Api, Resource
-from src.gameControl import GameControl
+from flask import Flask, jsonify, request, current_app
+from flask_restful import Api, Resource, reqparse, fields, marshal_with
+from flask_sqlalchemy import SQLAlchemy
+from singleton import Singleton
 import argparse
+import uuid
+import random
+import json
 
 app = Flask(__name__)
 api = Api(app)
-control = GameControl()
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+db = SQLAlchemy(app)
+db.init_app(app)
 
-@app.route('/player', methods=['GET'])
-def getPlayers():
-    players = control.getPlayers()
-    response = {'players': []}
-    for player in players:
-        response['players'].append(player.jsonify())
-    return response
-    
-@app.route('/player/create', methods=['POST'])
-def registerPlayer():
-    data = request.get_json()
-    if not 'name' in data:
-        return '', 403
-    name = data['name']
-    player = control.createPlayer(name)
-    return player.jsonify()
+class PlayerModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.Integer, nullable=False)
 
-@app.route('/room', methods=['GET'])
-def getRooms():
-    rooms = control.getRooms()
-    response = {'rooms': []}
-    for room in rooms:
-        response['rooms'].append(room.jsonify())
-    return response
+class RoomModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    master = db.Column(db.String, nullable=False)
+    players = db.Column(db.String, nullable=False)
+    ready = db.Column(db.Boolean, nullable=False)
+    passwd = db.Column(db.Integer, nullable=False)
 
-@app.route('/room/create', methods=['POST'])
-def createRoom():
-    data = request.get_json()
-    if not 'player' in data:
-        return '', 403
-    newRoom = control.createRoom(data['player'])
-    return newRoom.jsonify()
-@app.route('/room/join', methods=['POST'])
-def joinRoom():
-    data = request.get_json()
-    response = str(control.joinRoom(data))
-    return {"success": response}
-@app.route('/room/leave', methods=['POST'])
-def leaveRoom():
-    data = request.get_json()
-    control.leaveRoom(data)
-    return ''
+player_resouce_fields = {
+    'id': fields.String,
+    'name': fields.String
+}
+
+room_resourse_fields = {
+    'id': fields.String,
+    'master': fields.String,
+    'players': fields.String,
+    'ready': fields.Boolean,
+    'passwd': fields.Integer
+}
+#with app.app_context():
+#    db.create_all()
+
+@marshal_with(player_resouce_fields)
+def serializePlayer(player: PlayerModel):
+    return player
+
+class API(metaclass=Singleton): 
+    @app.route('/player', methods=['GET'])
+    @marshal_with(player_resouce_fields)
+    def getPlayers():
+        result = PlayerModel.query.all()
+        return result
+
+    @app.route('/player/create', methods=['POST'])
+    def registerPlayer():
+        data = request.get_json()
+        if not 'name' in data:
+            return 'Missing name', 404
+        input_name = data['name']
+        from src.model.player_model import PlayerModel
+        player = PlayerModel(
+            id   = str(uuid.uuid4()),
+            name = input_name
+        )
+        db.session.add(player)
+        db.session.commit()
+        return '', 201
+
+    @app.route('/room', methods=['GET'])
+    def getRooms():
+        result = RoomModel.query.all()
+        return result
+
+    @app.route('/room/create', methods=['POST'])
+    @marshal_with(room_resourse_fields)
+    def createRoom():
+        data = request.get_json()
+        #Room master must be in data
+        if not 'player' in data:
+            return 'Missing room master.', 404
+        player = PlayerModel.query.get(data['player']['id'])
+        room = RoomModel(
+            id = str(uuid.uuid4()),
+            master = player.id,
+            players = json.dumps(serializePlayer(player)),
+            ready = False,
+            passwd = random.randint(1000,9999)
+        )
+        db.session.add(room)
+        db.session.commit()
+        return room
+
+    @app.route('/room/join', methods=['POST'])
+    @marshal_with (room_resourse_fields)
+    def joinRoom():
+        data = request.get_json()
+        if not data['room']:
+            return 'Missing room information', 404
+        if not data['player']:
+            return 'Missing player information', 404
+        room_id = data['room']['id']
+        room = RoomModel.query.get(room_id)
+        players = room.players.split(';')
+        new_player = PlayerModel.query.get(not data['player']['id'])
+        new_player = json.dumps(serializePlayer(new_player))
+        #Játékos beléphet még több szobába !!!!!!
+        if new_player in players:
+            return 'Player already joined!', 402
+        players.append(new_player)
+        room.players = ";".join(players)
+        db.session.add(room)
+        db.session.commit()
+        return room
+        
+    @app.route('/room/leave', methods=['POST'])
+    def leaveRoom():
+        data = request.get_json()
+        current_app._control.leaveRoom(data)
+        return ''
+
+
+player_put_args = reqparse.RequestParser()
+player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
+player_put_args.add_argument("id", type=int, help="ID of player is required", required=True)
+
 if  __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Time server")
     parser.add_argument('--port', type=int)
     args = parser.parse_args()
-
-    app.run(host='127.0.0.1', port=args.port)
+    
+    app.run(host='127.0.0.1')

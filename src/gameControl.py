@@ -1,17 +1,25 @@
 from src.playerFactory import PlayerFactory
 from src.roomFactory import RoomFactory
 from src.player import Player
-class GameControl():
-    players = []
-    rooms = []
-    def createPlayer(self, name: str):
-        newPlayer = PlayerFactory.createPlayer(name)
-        self.players.append(newPlayer)
-        return newPlayer
+from flask_sqlalchemy import SQLAlchemy
+import uuid
+class GameControl(object):
+    def __init__(self, db):
+        self.db = db
+
+    def createPlayer(self, input_name: str):
+        from src.model.player_model import PlayerModel
+        player = PlayerModel(
+            id   = str(uuid.uuid4()),
+            name = input_name
+        )
+        self.db.session.add(player)
+        self.db.session.commit()
+        return player
 
     def getPlayers(self):
-        return self.players
-    
+        return
+
     def getPlayerByID(id: str):
         #TODO
         return
