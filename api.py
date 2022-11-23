@@ -50,6 +50,12 @@ class API(metaclass=Singleton):
         result = PlayerModel.query.all()
         return result
 
+
+    '''
+    {
+      "name":"jackson"
+    }   
+    '''
     @app.route('/player/create', methods=['POST'])
     def registerPlayer():
         data = request.get_json()
@@ -70,6 +76,15 @@ class API(metaclass=Singleton):
         result = RoomModel.query.all()
         return result
 
+    '''
+    {
+        "player":
+        {
+            "id": "f2cf0491-0ed5-46ab-bb8d-11c455b9e70f",
+            "name": "jackson"
+        }
+    }
+    '''
     @app.route('/room/create', methods=['POST'])
     @marshal_with(room_resourse_fields)
     def createRoom():
@@ -89,6 +104,20 @@ class API(metaclass=Singleton):
         db.session.commit()
         return room
 
+
+    '''
+    {
+    "room": 
+    {
+        "id": "b20451f3-631d-4d8a-99bb-c268a06c43dd"
+    },
+    "player":
+    {
+        "id": "7740930d-d34a-4085-abfb-275576e142b4",
+        "name": "jackson"
+        }
+    }
+    '''
     @app.route('/room/join', methods=['POST'])
     @marshal_with (room_resourse_fields)
     def joinRoom():
