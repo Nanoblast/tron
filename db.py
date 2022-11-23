@@ -1,4 +1,29 @@
-class DB(metaclass=Singleton):
-    def __init__(self, db):
-        self.db = db
-    
+from flask import Flask, jsonify, request, current_app
+from flask_restful import Api, Resource, reqparse, fields, marshal_with
+from flask_sqlalchemy import SQLAlchemy
+from singleton import Singleton
+import argparse
+import uuid
+import random
+import json
+
+app = Flask(__name__)
+api = Api(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+db = SQLAlchemy(app)
+db.init_app(app)
+
+class PlayerModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.Integer, nullable=False)
+
+class RoomModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    master = db.Column(db.String, nullable=False)
+    players = db.Column(db.String, nullable=False)
+    ready = db.Column(db.Boolean, nullable=False)
+    passwd = db.Column(db.Integer, nullable=False)
+
+with app.app_context():
+    db.create_all()
+    print('database init done')
