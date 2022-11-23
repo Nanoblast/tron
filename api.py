@@ -24,6 +24,17 @@ class RoomModel(db.Model):
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
 
+class TileModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    x = db.Column(db.String, nullable=False)
+    y = db.Column(db.String, nullable=False)
+    occupied = db.Column(db.Boolean, nullable=False)
+    player = db.Column(db.String, nullable=True)
+
+class MapModel(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    tiles = db.Column(db.String, nullable=False)
+    
 player_resouce_fields = {
     'id': fields.String,
     'name': fields.String
@@ -37,10 +48,26 @@ room_resourse_fields = {
     'passwd': fields.Integer
 }
 
+tile_resource_fields = {
+    'id': fields.String,
+    'x': fields.Integer,
+    'y': fields.Integer,
+    'occupied': fields.Boolean,
+    'player': fields.String
+}
+
+map_resource_fields = {
+    'id': fields.String,
+    'tiles': fields.String
+}
+
 @marshal_with(player_resouce_fields)
 def serializePlayer(player: PlayerModel):
     return player
 
+@marshal_with(tile_resource_fields)
+def serializeTile(tile: TileModel):
+    return tile
 class API(metaclass=Singleton): 
     @app.route('/player', methods=['GET'])
     @marshal_with(player_resouce_fields)
@@ -152,6 +179,19 @@ class API(metaclass=Singleton):
         db.session.commit()
         return room
 
+    '''
+    {
+        "room": 
+        {
+            "id": "b20451f3-631d-4d8a-99bb-c268a06c43dd"
+        },
+        "player":
+        {
+            "id": "7740930d-d34a-4085-abfb-275576e142b4",
+            "name": "jackson"
+        }
+    }
+    '''
     @app.route('/room/leave', methods=['POST'])
     @marshal_with(room_resourse_fields)
     def leaveRoom():
@@ -166,7 +206,7 @@ class API(metaclass=Singleton):
         leaving_player = PlayerModel.query.get(data['player']['id'])
         leaving_player = json.dumps(serializePlayer(leaving_player))
         if not leaving_player in players:
-            return 'Player is not ingi the room', 406
+            return 'Player is not in the room', 406
         players.remove(leaving_player)
         print(players)
         print(leaving_player)
@@ -174,6 +214,26 @@ class API(metaclass=Singleton):
         db.session.add(room)
         db.session.commit()
         return room
+    
+
+    @app.route('/map/create', methods=['GET'])
+    @marshal_with(map_resource_fields)
+    def createMap():
+        tiles = {}
+        for i in range(16):
+            for j in range(16):
+                tiles[str((i+1,j+1))] = serializeTile(TileModel(
+                    id = uuid.uuid4(),
+                    x = i+1,
+                    y = j+1,
+                    occupied = False
+                ))
+        print(len(tiles))
+        map = MapModel(
+            id = uuid.uuid4(),
+            tiles = json.dumps((tiles))
+        )
+        return map
 
 player_put_args = reqparse.RequestParser()
 player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
