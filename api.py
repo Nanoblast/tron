@@ -218,15 +218,15 @@ class API(metaclass=Singleton):
     @app.route('/map/create', methods=['GET'])
     @marshal_with(map_resource_fields)
     def createMap():
-        tiles = {}
+        tiles = []
         for i in range(16):
             for j in range(16):
-                tiles[str((i+1,j+1))] = serializeTile(TileModel(
+                tiles.append(serializeTile(TileModel(
                     id = uuid.uuid4(),
                     x = i+1,
                     y = j+1,
                     occupied = False
-                ))
+                )))
         map = MapModel(
             id = uuid.uuid4(),
             tiles = json.dumps((tiles))
