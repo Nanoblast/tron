@@ -88,6 +88,10 @@ def serializeTile(tile: TileModel):
 def serializeMap(map: MapModel):
     return map
 
+@marshal_with(room_resourse_fields)
+def serializeRoom(room: RoomModel):
+    return room
+
 class API(metaclass=Singleton): 
     @app.route('/player', methods=['GET'])
     @marshal_with(player_resouce_fields)
@@ -126,13 +130,15 @@ class API(metaclass=Singleton):
     }
     '''
     @app.route('/room', methods=['GET'])
-    @marshal_with(room_resourse_fields)
+
     def getRoom():
         data = request.get_json()
         if not data['id']:
             return 'Missing room ID', 406
-        result = RoomModel.query.get(data['id'])
-        return result
+        room = RoomModel.query.get(data['id'])
+        response = serializeRoom(room)
+        response['players'] = json.loads(room.players)
+        return response
 
     '''
     {
@@ -144,7 +150,6 @@ class API(metaclass=Singleton):
     }
     '''
     @app.route('/room/create', methods=['POST'])
-    @marshal_with(room_resourse_fields)
     def createRoom():
         data = request.get_json()
         #Room master must be in data
@@ -154,13 +159,15 @@ class API(metaclass=Singleton):
         room = RoomModel(
             id = str(uuid.uuid4()),
             master = player.id,
-            players = json.dumps(serializePlayer(player)),
+            players = json.dumps([serializePlayer(player)]),
             ready = False,
             passwd = random.randint(1000,9999)
         )
         db.session.add(room)
         db.session.commit()
-        return room
+        response = serializeRoom(room)
+        response['players'] = json.loads(room.players)
+        return response
 
 
     '''
@@ -177,7 +184,6 @@ class API(metaclass=Singleton):
     }
     '''
     @app.route('/room/join', methods=['POST'])
-    @marshal_with (room_resourse_fields)
     def joinRoom():
         data = request.get_json()
         if not data['room']:
@@ -186,17 +192,22 @@ class API(metaclass=Singleton):
             return 'Missing player information', 406
         room_id = data['room']['id']
         room = RoomModel.query.get(room_id)
-        players = room.players.split(';')
+        if not room:
+            return 'Invalid information', 406
+        players = json.loads(room.players)
         new_player = PlayerModel.query.get(data['player']['id'])
-        new_player = json.dumps(serializePlayer(new_player))
+        new_player = serializePlayer(new_player)
         #Játékos beléphet még több szobába !!!!!!
         if new_player in players:
-            return 'Player already joined!', 402
+            return 'Player already joined!', 406
         players.append(new_player)
-        room.players = ";".join(players)
+        print(players)
+        room.players = json.dumps(players)
         db.session.add(room)
         db.session.commit()
-        return room
+        response = serializeRoom(room)
+        response['players'] = json.loads(room.players) 
+        return response
 
     '''
     {
@@ -212,7 +223,6 @@ class API(metaclass=Singleton):
     }
     '''
     @app.route('/room/leave', methods=['POST'])
-    @marshal_with(room_resourse_fields)
     def leaveRoom():
         data = request.get_json()
         if not data['player']:
@@ -221,18 +231,20 @@ class API(metaclass=Singleton):
             return 'Missing room information', 406
         room_id = data['room']['id']
         room = RoomModel.query.get(room_id)
-        players = room.players.split(';')
+        players = json.loads(room.players)
         leaving_player = PlayerModel.query.get(data['player']['id'])
-        leaving_player = json.dumps(serializePlayer(leaving_player))
+        leaving_player = serializePlayer(leaving_player)
         if not leaving_player in players:
             return 'Player is not in the room', 406
         players.remove(leaving_player)
         print(players)
         print(leaving_player)
-        room.players = ";".join(players)
+        room.players = json.dumps(players)
         db.session.add(room)
         db.session.commit()
-        return room
+        response = serializeRoom(room)
+        response['players'] = json.loads(room.players) 
+        return response
     
 
     @app.route('/map/create', methods=['GET'])
@@ -258,6 +270,9 @@ class API(metaclass=Singleton):
             'tiles': tiles
         }
         return response
+        
+
+
 
 player_put_args = reqparse.RequestParser()
 player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
