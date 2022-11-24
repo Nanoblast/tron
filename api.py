@@ -112,7 +112,7 @@ class API(metaclass=Singleton):
         )
         db.session.add(player)
         db.session.commit()
-        return '', 201
+        return serializePlayer(player), 201
 
     @app.route('/rooms', methods=['GET'])
     @marshal_with(room_resourse_fields)
