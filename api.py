@@ -6,12 +6,15 @@ import argparse
 import uuid
 import random
 import json
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
 api = Api(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 db.init_app(app)
+CORS(app)
+
 
 class PlayerModel(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -56,10 +59,22 @@ tile_resource_fields = {
     'player': fields.String
 }
 
+
 map_resource_fields = {
     'id': fields.String,
     'tiles': fields.String
 }
+
+'''map_resource_fields = {
+    'id': fields.String,
+    'tiles': fields.List(fields.Nested(api.model({
+        'id': fields.String,
+        'x': fields.Integer,
+        'y': fields.Integer,
+        'occupied': fields.Boolean,
+        'player': fields.String 
+    })))
+}'''
 
 @marshal_with(player_resouce_fields)
 def serializePlayer(player: PlayerModel):
@@ -68,6 +83,11 @@ def serializePlayer(player: PlayerModel):
 @marshal_with(tile_resource_fields)
 def serializeTile(tile: TileModel):
     return tile
+
+@marshal_with(map_resource_fields)
+def serializeMap(map: MapModel):
+    return map
+
 class API(metaclass=Singleton): 
     @app.route('/player', methods=['GET'])
     @marshal_with(player_resouce_fields)
@@ -216,22 +236,28 @@ class API(metaclass=Singleton):
     
 
     @app.route('/map/create', methods=['GET'])
-    @marshal_with(map_resource_fields)
+    #@marshal_with(map_resource_fields)
     def createMap():
         tiles = []
         for i in range(16):
             for j in range(16):
                 tiles.append(serializeTile(TileModel(
-                    id = uuid.uuid4(),
+                    id = str(uuid.uuid4()),
                     x = i+1,
                     y = j+1,
                     occupied = False
                 )))
         map = MapModel(
-            id = uuid.uuid4(),
-            tiles = json.dumps((tiles))
+            id = str(uuid.uuid4()),
+            tiles = (json.dumps(tiles))
         )
-        return map
+        db.session.add(map)
+        db.session.commit()
+        response = {
+            'id': map.id,
+            'tiles': tiles
+        }
+        return response
 
 player_put_args = reqparse.RequestParser()
 player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
