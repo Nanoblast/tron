@@ -7,7 +7,6 @@ import uuid
 import random
 import json
 from flask_cors import CORS, cross_origin
-from src.gameControl import GameControl
 
 app = Flask(__name__)
 api = Api(app)
@@ -15,8 +14,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 db.init_app(app)
 CORS(app)
-control = GameControl()
-
 
 class PlayerModel(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -28,6 +25,7 @@ class RoomModel(db.Model):
     players = db.Column(db.String, nullable=False)
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
+    map = db.Column(db.String, nullable=True)
 
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -39,7 +37,38 @@ class TileModel(db.Model):
 class MapModel(db.Model):
     id = db.Column(db.String, primary_key=True)
     tiles = db.Column(db.String, nullable=False)
+
+class GameControl(metaclass=Singleton):
+    games = []
+    def __init__(self):
+        self.db = db
     
+    def startGame(self, room):
+        game = {
+            "turn": 1,
+            "players": json.loads(room.players)
+        }
+        print(game)
+        self.games.append(game)
+        return game
+
+    def findGameByPlayer(self, player):
+        for g in self.games:
+            if player in g['players']:
+                return g
+        return False
+
+    def step(self, data):
+        player = serializePlayer(PlayerModel.query.get(
+            data['player']['id'])
+            )
+        game = self.findGameByPlayer(player)
+        
+        #Validating the passed ID with the current players ID
+        if game['players'][int(game['turn'])-1] == player:
+            #TODO GAMING STEPS
+            return
+        
 player_resouce_fields = {
     'id': fields.String,
     'name': fields.String
@@ -50,7 +79,9 @@ room_resourse_fields = {
     'master': fields.String,
     'players': fields.String,
     'ready': fields.Boolean,
-    'passwd': fields.Integer
+    'passwd': fields.Integer,
+    #Foreing key
+    'map': fields.String
 }
 
 tile_resource_fields = {
@@ -77,6 +108,7 @@ map_resource_fields = {
         'player': fields.String 
     })))
 }'''
+control = GameControl()
 
 @marshal_with(player_resouce_fields)
 def serializePlayer(player: PlayerModel):
@@ -121,10 +153,15 @@ class API(metaclass=Singleton):
         return serializePlayer(player), 201
 
     @app.route('/rooms', methods=['GET'])
-    @marshal_with(room_resourse_fields)
+    #@marshal_with(room_resourse_fields)
     def getRooms():
-        result = RoomModel.query.all()
-        return result
+        rooms = RoomModel.query.all()
+        response = []
+        for room in rooms:
+            line = serializeRoom(room)
+            line['players'] = json.loads(room.players)
+            response.append(line)
+        return response
     
     '''
     {
@@ -138,6 +175,8 @@ class API(metaclass=Singleton):
         if not data['id']:
             return 'Missing room ID', 406
         room = RoomModel.query.get(data['id'])
+        if not room:
+            return 'Invalid information'
         response = serializeRoom(room)
         response['players'] = json.loads(room.players)
         return response
@@ -252,6 +291,12 @@ class API(metaclass=Singleton):
     @app.route('/map/create', methods=['GET'])
     #@marshal_with(map_resource_fields)
     def createMap():
+        data = request.get_json()
+        if not data['room']:
+            return 'Missing room information', 406
+        room = RoomModel.query.get(data['room']['id'])
+        if not room:
+            return 'Invalid information'
         tiles = []
         for i in range(16):
             for j in range(16):
@@ -265,25 +310,39 @@ class API(metaclass=Singleton):
             id = str(uuid.uuid4()),
             tiles = (json.dumps(tiles))
         )
+        room.map = map.id
         db.session.add(map)
         db.session.commit()
+
         response = {
             'id': map.id,
             'tiles': tiles
         }
         return response
+    
+    @app.route('/player/step', methods=['POST'])
+    def playerStep():
+        data = request.get_json()
+        '''if not data['player']:
+            return 'Missing player information', 406
+        if not data['steps']:
+            return 'Missing movement information', 406'''
+        control.step(data)
+        return 'Done'
 
     @app.route('/game/start', methods=['POST'])
     def startGame():
         data = request.get_json()
         if not data['room']:
-            return 'Missing room information'
+            return 'Missing room information', 406
         if not data['room']['id']:
-            return 'Missing room ID'
+            return 'Missing room ID', 406
         room = RoomModel.query.get(data['room']['id'])
         if not room:
             return 'Invalid room', 406
-        control.startGame(room)
+        game = control.startGame(room)
+        return 'Game started! ' + 'Player ' + str(game['turn']) +'\'s turn to step!' , 201
+
 
 
 

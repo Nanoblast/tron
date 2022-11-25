@@ -23,6 +23,7 @@ class RoomModel(db.Model):
     players = db.Column(db.String, nullable=False)
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
+    map = db.Column(db.String, nullable=True)
     
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
