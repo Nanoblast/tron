@@ -7,6 +7,7 @@ import uuid
 import random
 import json
 from flask_cors import CORS, cross_origin
+from src.gameControl import GameControl
 
 app = Flask(__name__)
 api = Api(app)
@@ -14,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 db.init_app(app)
 CORS(app)
+control = GameControl()
 
 
 class PlayerModel(db.Model):
@@ -270,7 +272,18 @@ class API(metaclass=Singleton):
             'tiles': tiles
         }
         return response
-        
+
+    @app.route('/game/start', methods=['POST'])
+    def startGame():
+        data = request.get_json()
+        if not data['room']:
+            return 'Missing room information'
+        if not data['room']['id']:
+            return 'Missing room ID'
+        room = RoomModel.query.get(data['room']['id'])
+        if not room:
+            return 'Invalid room', 406
+        control.startGame(room)
 
 
 
