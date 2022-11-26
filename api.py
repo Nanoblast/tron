@@ -288,6 +288,14 @@ class API(metaclass=Singleton):
         return response
     
 
+    '''
+    {
+        "room":
+        {
+            "id":"73d38bf6-ba81-486d-a054-00ceef9c13d6"
+        }
+    }
+    '''
     @app.route('/map/create', methods=['GET'])
     #@marshal_with(map_resource_fields)
     def createMap():
@@ -320,7 +328,7 @@ class API(metaclass=Singleton):
         }
         return response
     
-    @app.route('/player/step', methods=['POST'])
+    @app.route('/game/step', methods=['POST'])
     def playerStep():
         data = request.get_json()
         '''if not data['player']:
