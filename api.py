@@ -59,9 +59,9 @@ class GameControl(metaclass=Singleton):
             if t['x'] == 1 and t['y'] == 1 : 
                 t['player'] = game['players'][0]['id']
                 self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
-            if t['x'] == 1 and t['y'] == 16 : 
+            if t['x'] == 1 and t['y'] == 4 : 
                 t['player'] = game['players'][1]['id']
-                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
+                self.steps[t['player']] = [{"x": t['x'], "y":4}]
             if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2:
                 t['player'] = game['players'][2]['id'] 
                 self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
@@ -94,6 +94,7 @@ class GameControl(metaclass=Singleton):
         if self.steps[player['id']][-1]['x'] != steps[0]['x'] or self.steps[player['id']][-1]['y'] != steps[0]['y']:
             return False
         if game['current_player'] != player['id']:
+            print(game['current_player'], player['id'])
             return False
         for i in range(len(steps)-1):
             valid = self.validateStep(game, steps[i], steps[i+1])
@@ -101,33 +102,42 @@ class GameControl(metaclass=Singleton):
                 print('invalid')
                 return False
             
-            self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
-            game['current_player'] = self.getNextPlayer(game)
-            game['turn'] += 1
             self.steps[player['id']].append(steps[i+1])
+            death = self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
+            if death: break
             print(self.steps)
-            return game['current_player']
-            return True
-            _to.occupied = True
-            _to.player = json.dumps(player)
-            db.session.add(_to)
-            db.session.commit()
+        game['current_player'] = self.getNextPlayer(game)
+        return game['current_player']
 
     def getNextPlayer(self, game):
+        
         turn_index = game['turn'] % (len(game['players']))
+        game['turn'] += 1
         return game['players'][turn_index]['id']
 
     def updateXY(self, x, y, game, player):
         for i in range(len(game['map'])):
             if game['map'][i]['x'] == x and game['map'][i]['y'] == y:
                 if str(game['map'][i]['player']) != "None":
-                    self.killPlayer(player)
+                    self.killPlayer(player, game)
+                    return True
                 else:
                     game['map'][i]['player'] = player['id']
-                return
+                return False
         return True
-    def killPlayer(self, player):
-        print('KILL')
+    def killPlayer(self, player, game ):
+        print("kill")
+        for tile in game['map']:
+            if tile['player'] == player['id']:
+                tile['player'] = "None"
+        for i in range(len(game['players'])):
+            print('xxx',i, len(game['players']))
+            if game['players'][i]['id'] == player['id']:
+                del game['players'][i]
+                print(game)
+                break
+        self.steps.pop(player['id'])
+        print(game['players'])
     def validateStep(self, game, _from, _to):
         #ezért a pokolban fogok elégni
         if (abs(int(_from['x']) - int(_to['x'])) >= 0 and abs(int(_from['x']) - int(_to['x'])) <= 1) and (abs(int(_from['y']) - int(_to['y'])) >= 0 and abs(int(_from['y']) - int(_to['y'])) <= 1 and (abs(int(_from['x']) - int(_to['x'])) + abs(int(_from['y']) - int(_to['y'])) == 1)) :
@@ -506,6 +516,7 @@ class API(metaclass=Singleton):
             return 'Game not found', 406
         return {
             'turn': game['turn'],
+            'number_of_players': len(game['players']),
             'current_player': game['current_player'],
             'map' : game['map']
         }
