@@ -249,7 +249,7 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(id)
         if not room:
             return 'Invalid information'
-        
+        response = {}
         response['players'] = json.loads(room.players)
         return response
 
