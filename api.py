@@ -198,12 +198,11 @@ class API(metaclass=Singleton):
     }
     '''
     @app.route('/room', methods=['GET'])
-
     def getRoom():
-        data = request.get_json()
-        if not data['id']:
+        id = request.args.get('id')
+        if not id:
             return 'Missing room ID', 406
-        room = RoomModel.query.get(data['id'])
+        room = RoomModel.query.get(id)
         if not room:
             return 'Invalid information'
         response = serializeRoom(room)
