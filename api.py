@@ -347,13 +347,13 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(room_id)
         players = json.loads(room.players)
         leaving_player = PlayerModel.query.get(data['player']['id'])
-        leaving_player = serializePlayer(leaving_player)
-        if not leaving_player in players:
+        s_leaving_player = serializePlayer(leaving_player)
+        if not s_leaving_player in players:
             return 'Player is not in the room', 406
-        players.remove(leaving_player)
-        print(players)
-        print(leaving_player)
+        players.remove(s_leaving_player)
         room.players = json.dumps(players)
+        leaving_player.ready = False
+        db.session.add(leaving_player)
         db.session.add(room)
         db.session.commit()
         response = serializeRoom(room)
