@@ -46,14 +46,26 @@ class GameControl(metaclass=Singleton):
     
     def startGame(self, room):
         from maps import BasicMap
+        steps = {
+            1: [],
+            2: [],
+            3: [],
+            4: []
+        }
         game = {
             "turn": 1,
+            "current_player": json.loads(room.players)[0],
             "players": json.loads(room.players),
             "scheme": BasicMap()
         }
         self.games.append(game)
         return game
 
+    def getState(self, player_id):
+        player = serializePlayer(PlayerModel.query.get(player_id))
+        game = self.findGameByPlayer(player)
+        return game
+        
     def findGameByPlayer(self, player):
         for g in self.games:
             if player in g['players']:
@@ -375,7 +387,7 @@ class API(metaclass=Singleton):
             'id': map.id,
             'tiles': tiles
         })
-        for m in range(4):
+        for m in range(3):
             tiles = []
             for i in range(16):
                 for j in range(16):
@@ -427,8 +439,16 @@ class API(metaclass=Singleton):
         db.session.commit()
         return 'Game started! ' + 'Player ' + str(game['turn']) +'\'s turn to step!' , 201
 
-
-
+    @app.route('/game/state', methods=['GET'])
+    def getState():
+        player_id = request.args.get('id')
+        game = control.getState(player_id)
+        if not game:
+            return 'Game not found', 406
+        return {
+            'turn': game['turn'],
+            'current_player': game['current_player']
+        }
 
 player_put_args = reqparse.RequestParser()
 player_put_args.add_argument("name", type=str, help="Name of player is required", required=True)
