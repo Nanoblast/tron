@@ -46,28 +46,28 @@ class GameControl(metaclass=Singleton):
     
     def startGame(self, room):
         from maps import BasicMap
-        self.steps = {}
         game = {
             "turn": 1,
             "current_player": json.loads(room.players)[0]['id'],
             "players": json.loads(room.players),
-            "map": []
+            "map": [],
+            "history": {}
         }
         map = MapModel.query.get(room.map)
         tiles = json.loads(map.tiles)
         for t in tiles:
             if t['x'] == 1 and t['y'] == 1 : 
                 t['player'] = game['players'][0]['id']
-                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
+                game['history'][t['player']] = [{"x": t['x'], "y":t["y"]}]
             if t['x'] == 1 and t['y'] == 4 : 
                 t['player'] = game['players'][1]['id']
-                self.steps[t['player']] = [{"x": t['x'], "y":4}]
+                game['history'][t['player']] = [{"x": t['x'], "y":4}]
             if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2:
                 t['player'] = game['players'][2]['id'] 
-                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
+                game['history'][t['player']] = [{"x": t['x'], "y":t["y"]}]
             if t['x'] == 16 and t['y'] == 16 and len(game['players']) > 3: 
                 t['player']= game['players'][3]['id']
-                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
+                game['history'][t['player']] = [{"x": t['x'], "y":t["y"]}]
         game['map'] = tiles
         self.games.append(game)
         return game
@@ -91,7 +91,7 @@ class GameControl(metaclass=Singleton):
         if not game: return
         steps = data['steps']
 
-        if self.steps[player['id']][-1]['x'] != steps[0]['x'] or self.steps[player['id']][-1]['y'] != steps[0]['y']:
+        if game['history'][player['id']][-1]['x'] != steps[0]['x'] or game['history'][player['id']][-1]['y'] != steps[0]['y']:
             return False
         if game['current_player'] != player['id']:
             print(game['current_player'], player['id'])
@@ -102,11 +102,11 @@ class GameControl(metaclass=Singleton):
                 print('invalid')
                 return False
             
-            self.steps[player['id']].append(steps[i+1])
+            game['history'][player['id']].append(steps[i+1])
 
             death = self.updateXY(steps[i], steps[i+1], game, player)
             if death: break
-            print(self.steps)
+            print(game['history'])
         game['current_player'] = self.getNextPlayer(game)
         return game['current_player']
 
@@ -140,7 +140,7 @@ class GameControl(metaclass=Singleton):
                 del game['players'][i]
                 print(game)
                 break
-        self.steps.pop(player['id'])
+        game['history'].pop(player['id'])
         print(game['players'])
     def validateStep(self, game, _from, _to):
         #ezért a pokolban fogok elégni
@@ -293,7 +293,7 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(id)
         if not room:
             return 'Invalid information'
-        response = {}
+        response = serializeRoom(room)
         response['players'] = json.loads(room.players)
         return response
 
@@ -522,7 +522,8 @@ class API(metaclass=Singleton):
             'turn': game['turn'],
             'number_of_players': len(game['players']),
             'current_player': game['current_player'],
-            'map' : game['map']
+            'map' : game['map'],
+            'history': game['history']
         }
 
 player_put_args = reqparse.RequestParser()
