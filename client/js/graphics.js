@@ -192,11 +192,11 @@ class PendingMoveElem extends EmptyElem {
 }
 
 class TronElem extends EmptyElem {
-    constructor(map, x, y) {
+    constructor(map, x, y, player) {
         super(map, x, y)
 
         this.blurState = 0
-        this.player = 0
+        this.player = player
         this.direction = Directions.Up
     }
 
@@ -204,6 +204,12 @@ class TronElem extends EmptyElem {
         switch(player_id) {
             case 0:
                 return '#FF2222'
+            case 1:
+                return '#22FF22'
+            case 2:
+                return '#2222FF'
+            case 3:
+                return '#FFFF22'
         }
     }
 
@@ -211,6 +217,12 @@ class TronElem extends EmptyElem {
         switch(player_id) {
             case 0:
                 return '#651010'
+            case 1:
+                return '#106510'
+            case 2:
+                return '#101065'
+            case 3:
+                return '#656510'
         }
     }
 
@@ -337,8 +349,8 @@ class Map extends AbstractUiElem {
         this.tiles[y][x] = new PendingMoveElem(this, x, y, player_id)
     }
 
-    addPlayer(x, y) {
-        this.tiles[y][x] = new TronElem(this, x, y)
+    addPlayer(x, y, player_id) {
+        this.tiles[y][x] = new TronElem(this, x, y, player_id)
     }
 
     setPlayerDirection(x, y, dir) {

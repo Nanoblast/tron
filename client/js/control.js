@@ -58,7 +58,7 @@ class TronGameScene extends AbstractScene {
         super.init()
 
         this.canvasHandler.addElement(new Map(this.canvasHandler, 16, 16))
-        this.canvasHandler.getElement(0).addPlayer(this.player.x, this.player.y)
+        this.canvasHandler.getElement(0).addPlayer(this.player.x, this.player.y, 0)
 
         this.intervalId = null
 
