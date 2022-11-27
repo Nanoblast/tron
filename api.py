@@ -18,6 +18,7 @@ CORS(app)
 class PlayerModel(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.Integer, nullable=False)
+    ready = db.Column(db.Boolean, nullable=False)
 
 class RoomModel(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -100,7 +101,8 @@ class GameControl(metaclass=Singleton):
         
 player_resouce_fields = {
     'id': fields.String,
-    'name': fields.String
+    'name': fields.String,
+    'ready': fields.Boolean
 }
 
 room_resourse_fields = {
@@ -167,18 +169,38 @@ class API(metaclass=Singleton):
       "name":"jackson"
     }   
     '''
+    @app.route('/player/ready', methods=['POST'])
+    def setReady():
+        data = request.get_json()
+        if not 'id' in data:
+            return 'missing ID', 406
+        player = PlayerModel.query.get(data['id'])
+        player.ready = True
+        db.session.add(player)
+        db.session.commit()
+        return serializePlayer(player), 201
+    
     @app.route('/player/create', methods=['POST'])
-    def registerPlayer():
+    def createPlayer():
         data = request.get_json()
         if not 'name' in data:
             return 'Missing name', 406
         input_name = data['name']
         player = PlayerModel(
             id   = str(uuid.uuid4()),
-            name = input_name
+            name = input_name,
+            ready = False
         )
         db.session.add(player)
         db.session.commit()
+        return serializePlayer(player), 201
+
+    @app.route('/player', methods=['GET'])
+    def getPlayer():
+        id = request.args.get('id')
+        if not id:
+            return 'Missing ID', 406
+        player = PlayerModel.query.get(id)
         return serializePlayer(player), 201
 
     @app.route('/rooms', methods=['GET'])

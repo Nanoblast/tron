@@ -16,6 +16,8 @@ db.init_app(app)
 class PlayerModel(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.Integer, nullable=False)
+    ready = db.Column(db.Boolean, nullable=False)
+
 
 class RoomModel(db.Model):
     id = db.Column(db.String, primary_key=True)
