@@ -487,7 +487,7 @@ class API(metaclass=Singleton):
             tiles = []
             for i in range(16):
                 for j in range(16):
-                    occupied  = True if random.randint(1,10) < m else False
+                    occupied  = True if random.randint(1,10) <= m+1 else False
                     tile = TileModel(
                         id = str(uuid.uuid4()),
                         x = i+1,
