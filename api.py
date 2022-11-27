@@ -61,13 +61,20 @@ class GameControl(metaclass=Singleton):
         map = MapModel.query.get(room.map)
         tiles = json.loads(map.tiles)
         for t in tiles:
-            if t['x'] == 1 and t['y'] == 1 : t['player'] = game['players'][0]['id']
-            if t['x'] == 1 and t['y'] == 16 : t['player'] = game['players'][1]['id']
-            if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2: t['player'] = game['players'][2]['id'] 
-            if t['x'] == 16 and t['y'] == 16 and len(game['players']) > 3: t['player']= game['players'][3]['id']
+            if t['x'] == 1 and t['y'] == 1 : 
+                t['player'] = game['players'][0]['id']
+                self.steps[1].append((t['x'], t['y']))
+            if t['x'] == 1 and t['y'] == 16 : 
+                t['player'] = game['players'][1]['id']
+                self.steps[2].append((t['x'], t['y']))
+            if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2:
+                t['player'] = game['players'][2]['id'] 
+                self.steps[3].append((t['x'], t['y']))
+            if t['x'] == 16 and t['y'] == 16 and len(game['players']) > 3: 
+                t['player']= game['players'][3]['id']
+                self.steps[1].append((t['x'], t['y']))
         game['map'] = tiles
         self.games.append(game)
-        print(game)
         return game
 
     def getState(self, player_id):
