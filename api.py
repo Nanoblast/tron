@@ -103,7 +103,8 @@ class GameControl(metaclass=Singleton):
                 return False
             
             self.steps[player['id']].append(steps[i+1])
-            death = self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
+
+            death = self.updateXY(steps[i], steps[i+1], game, player)
             if death: break
             print(self.steps)
         game['current_player'] = self.getNextPlayer(game)
@@ -115,9 +116,11 @@ class GameControl(metaclass=Singleton):
         game['turn'] += 1
         return game['players'][turn_index]['id']
 
-    def updateXY(self, x, y, game, player):
+    def updateXY(self, _from, _to, game, player):
         for i in range(len(game['map'])):
-            if game['map'][i]['x'] == x and game['map'][i]['y'] == y:
+            if game['map'][i]['x'] == _from['x'] and game['map'][i]['y'] == _from['y']:
+                game['map'][i]['occupied'] = True
+            if game['map'][i]['x'] == _to['x'] and game['map'][i]['y'] == _to['y']:
                 if str(game['map'][i]['player']) != "None":
                     self.killPlayer(player, game)
                     return True
@@ -130,6 +133,7 @@ class GameControl(metaclass=Singleton):
         for tile in game['map']:
             if tile['player'] == player['id']:
                 tile['player'] = "None"
+                tile['occupied'] = False
         for i in range(len(game['players'])):
             print('xxx',i, len(game['players']))
             if game['players'][i]['id'] == player['id']:
