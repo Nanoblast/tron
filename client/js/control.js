@@ -51,6 +51,7 @@ class TronGameScene extends AbstractScene {
 
         this.pendingMovements = []
         this.player = new Tron(4, 4)
+        this.dialog = null
     }
 
     init() {
@@ -61,6 +62,11 @@ class TronGameScene extends AbstractScene {
     }
 
     onKeyPressed(e) {
+        if (this.dialog != null) {
+            this.dialog.onKeyPressed(e)
+            return
+        }
+
         let lastCoord = null
 
         if (this.pendingMovements.length > 0) {
@@ -244,7 +250,12 @@ class RoomDetailScene extends AbstractScene {
             })
         })
         this.playerList.buttonManager.setButtonCallback(2, (handle) => {
-            handle.playerList.buttonManager.getSelectedButton().setText('Set Not Ready')
+            new SetReadyDataHandler(handle, handle.manager.player_id)
+            .setErrorCallback(this.genericErrorHandlerFunction)
+            .startRequest((handle, data) => {
+                handle.getRoomData()
+            })
+            //handle.playerList.buttonManager.getSelectedButton().setText('Set Not Ready')
         })
         this.playerList.buttonManager.setButtonCallback(3, (handle) => {
             handle.dialog = new DialogElem(handle)

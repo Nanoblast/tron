@@ -413,7 +413,11 @@ class RoomElem extends AbstractUiElem {
         ctx.fillText('Players: ' + this.room.players.length + '/4', startX + rectWidth / 50, startY + rectHeight * (3 / 8))
 
         if (this.room.players.length > 0) {
-            ctx.fillText('Host: ' + this.room.players.find((elem) => elem.id == this.room.master).name, startX + rectWidth / 50, startY + rectHeight / 2)
+            let master = this.room.players.find((elem) => elem.id == this.room.master)
+
+            if (master !== undefined) {
+                ctx.fillText('Host: ' + master.name, startX + rectWidth / 50, startY + rectHeight / 2)
+            }
         }
 
         if ("passwd" in this.room) {
@@ -756,6 +760,9 @@ class DialogElem extends AbstractUiElem {
     }
 
     draw(ctx) {
+        let fontSize = window.innerHeight / 60
+        ctx.font = fontSize + 'px Arial'
+
         ctx.strokeStyle = Colors.LightUi
         ctx.fillStyle = Colors.Background
 
@@ -832,8 +839,15 @@ class PlayerListElem extends AbstractUiElem {
         ctx.fillText('Navigate in the room options using the up and down arrow keys', window.innerWidth / 2, window.innerHeight / 10)
 
         for (let i = 0; i < 4; i++) {
-            ctx.strokeStyle = Colors.LightUi
-            ctx.fillStyle = Colors.LightUi
+            let playerExists = this.players.length > i
+
+            if (playerExists && this.players[i].ready) {
+                ctx.strokeStyle = Colors.LightUi
+                ctx.fillStyle = Colors.LightUi
+            } else {
+                ctx.strokeStyle = Colors.DarkUi
+                ctx.fillStyle = Colors.DarkUi
+            }
 
             let oneWidth = window.innerWidth / 6
             let spacing = window.innerWidth / 16
@@ -842,7 +856,7 @@ class PlayerListElem extends AbstractUiElem {
 
             ctx.textAlign = 'center'
 
-            let text = this.players.length > i ? this.players[i].name : 'No player'
+            let text = playerExists ? this.players[i].name : 'No player'
 
             ctx.fillText(text, window.innerWidth / 2 - (oneWidth * 2 + spacing + spacing / 2) + i * (oneWidth + spacing) + oneWidth / 2, window.innerHeight / 10 + fontSize * 5)
 
