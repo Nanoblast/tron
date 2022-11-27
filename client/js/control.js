@@ -52,13 +52,15 @@ class TronGameScene extends AbstractScene {
         this.pendingMovements = []
         this.player = new Tron(4, 4)
         this.dialog = null
+        this.map = null
     }
 
     init() {
         super.init()
 
-        this.canvasHandler.addElement(new Map(this.canvasHandler, 16, 16))
-        this.canvasHandler.getElement(0).addPlayer(this.player.x, this.player.y, 0)
+        this.map = new Map(this.canvasHandler, 16, 16)
+
+        this.canvasHandler.addElement(this.map)
 
         this.intervalId = null
 
@@ -77,6 +79,53 @@ class TronGameScene extends AbstractScene {
         new GetGameStateDataHandler(this, this.manager.player_id)
         .setErrorCallback(this.genericErrorHandlerFunction)
         .startRequest((handle, data) => {
+            handle.map.clear()
+
+            let playerTiles = []
+            let lineTiles = []
+
+            data['map'].forEach(element => {
+                if (element['player'] != null) {
+                    if (element['occupied']) {
+                        lineTiles.push(element)
+                    } else {
+                        playerTiles.push(element)
+                    }
+                }
+            });
+
+            let currentPlayer = playerTiles.find((elem) => elem.player == handle.manager.player_id)
+
+            if (currentPlayer != undefined) {
+                handle.player = new Tron(currentPlayer.x - 1, currentPlayer.y - 1)
+            }
+
+            // source: https://stackoverflow.com/questions/44356237/sortable-uuid-v1-for-multi-platform-application
+            const rearrangeId = uuid => {
+                let [low, mid, hiAndVersion] = uuid.split('-')
+              
+                return [hiAndVersion, mid, low].join('')
+            }
+
+            playerTiles.sort((a, b) => {
+                let rearranged1 = rearrangeId(a.id)
+                let rearranged2 = rearrangeId(b.id)
+              
+                if (rearranged1 > rearranged2) {
+                  return 1
+                }
+              
+                return -1
+            })
+
+            for (let i = 0; i < playerTiles.length; i++) {
+                handle.map.addPlayer(playerTiles[i].x - 1, playerTiles[i].y - 1, i)
+            }
+
+            lineTiles.forEach(element => {
+                handle.map.addLine(element.x - 1, element.y - 1, 0, Directions.Up, Directions.Down)
+            });
+
             if (this.intervalId == null) {
                 this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
             }
@@ -121,6 +170,21 @@ class TronGameScene extends AbstractScene {
             .setErrorCallback(this.genericErrorHandlerFunction)
             .startRequest((handle, data) => {
                 handle.manager.changeScene(new RoomListScene(handle.manager))
+            })
+        } else if (e.keyCode === 13) {
+            let steps = []
+
+            steps.push({'x': this.player.x + 1, 'y': this.player.y + 1})
+
+            this.pendingMovements.forEach(element => {
+                steps.push({'x': element.x + 1, 'y': element.y + 1})
+            });
+
+            new StepDataHandler(this, this.manager.player_id, steps)
+            .setErrorCallback(this.genericErrorHandlerFunction)
+            .startRequest((handle, data) => {
+                this.pendingMovements = []
+                handle.getStateData()
             })
         }
 

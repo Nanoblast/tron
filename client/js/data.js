@@ -177,3 +177,11 @@ class GetGameStateDataHandler extends AbstractDataHandler {
         this.params = {'id': player_id}
     }
 }
+
+class StepDataHandler extends AbstractDataHandler {
+    constructor(handle, player_id, steps) {
+        super(handle, 'game/step', 'POST')
+
+        this.data = {'player': {'id': player_id}, 'steps': steps}
+    }
+}

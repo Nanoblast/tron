@@ -338,6 +338,10 @@ class Map extends AbstractUiElem {
         this.height = height
         this.tiles = Array.from(Array(height), () => new Array(width))
 
+        this.clear()
+    }
+
+    clear() {
         for (let i = 0; i < this.height; i++) {
             for (let j = 0; j < this.width; j++) {
                 this.tiles[i][j] = null;
@@ -347,6 +351,10 @@ class Map extends AbstractUiElem {
 
     addPendingMove(x, y, player_id) {
         this.tiles[y][x] = new PendingMoveElem(this, x, y, player_id)
+    }
+
+    addLine(x, y, player_id, from, to) {
+        this.tiles[y][x] = new LineElem(this, from, to, x, y, player_id)
     }
 
     addPlayer(x, y, player_id) {
