@@ -211,6 +211,7 @@ class TronElem extends EmptyElem {
         this.blurState = 0
         this.player = player
         this.direction = Directions.Up
+        this.name = null
     }
 
     static getPlayerColor(player_id) {
@@ -241,6 +242,10 @@ class TronElem extends EmptyElem {
 
     setDirection(dir) {
         this.direction = dir
+    }
+
+    setName(name) {
+        this.name = name
     }
 
     draw(ctx) {
@@ -339,6 +344,22 @@ class TronElem extends EmptyElem {
         ctx.restore()
 
         ctx.shadowBlur = 2
+
+        if (this.name != null) {
+            ctx.textAlign = "center"
+            let fontSize = window.innerHeight / 60
+            ctx.font = fontSize + 'px Arial'
+
+            var size = ctx.measureText(this.name).width
+            ctx.fillStyle = "rgba(200, 200, 200, 0.7)";
+
+            let startX = this.getStartX() + TileElem.tileSize / 2
+            let startY = this.getStartY() - TileElem.tileSize / 24
+
+            ctx.fillRect(startX - size / 2 - 2, startY - fontSize - 2, size + 4, fontSize + 4);
+            ctx.fillStyle = "#000000";
+            ctx.fillText(this.name, startX, startY);
+        }
     }
 }
 
@@ -380,8 +401,14 @@ class Map extends AbstractUiElem {
         this.tiles[y][x] = new LineElem(this, from, to, x, y, player_id)
     }
 
+    addObstacle(x, y) {
+        this.tiles[y][x] = new ObstacleElem(this, x, y)
+    }
+
     addPlayer(x, y, player_id) {
         this.tiles[y][x] = new TronElem(this, x, y, player_id)
+
+        return this.tiles[y][x]
     }
 
     setPlayerDirection(x, y, dir) {
@@ -459,9 +486,11 @@ class RoomElem extends AbstractUiElem {
 
         ctx.textAlign = 'left'
 
-        ctx.fillText('Players: ' + this.room.players.length + '/4', startX + rectWidth / 50, startY + rectHeight * (3 / 8))
+        if (this.room.players != null) {
+            ctx.fillText('Players: ' + this.room.players.length + '/4', startX + rectWidth / 50, startY + rectHeight * (3 / 8))
+        }
 
-        if (this.room.players.length > 0) {
+        if (this.room.players != null && this.room.players.length > 0) {
             let master = this.room.players.find((elem) => elem.id == this.room.master)
 
             if (master !== undefined) {
@@ -469,7 +498,7 @@ class RoomElem extends AbstractUiElem {
             }
         }
 
-        if ("passwd" in this.room) {
+        if (this.room.protected) {
             ctx.drawImage(this.selected ? this.lockImage : this.lockGrayImage, startX + rectWidth - rectHeight / 6 - rectHeight / 12, startY + rectHeight / 16, rectHeight / 6, rectHeight / 6)
         }
     }
@@ -603,7 +632,13 @@ class DialogOptionElem extends AbstractUiElem {
 
         ctx.fillText(this.name, startX, startY + (fontSize + 6) / 2)
 
-        ctx.fillText(this.value, startX + this.dialog.getLongestNamedOptionWidth(ctx) + 7, startY + (fontSize + 6) / 2)
+        let displayValue = this.value
+
+        if (this.type == OptionType.Password) {
+            displayValue = '*'.repeat(this.value.length)
+        }
+
+        ctx.fillText(displayValue, startX + this.dialog.getLongestNamedOptionWidth(ctx) + 7, startY + (fontSize + 6) / 2)
 
         this.roundRect(ctx, startX + this.dialog.getLongestNamedOptionWidth(ctx) + 5, startY, this.dialog.rectWidth * (6 / 10), fontSize + 6) 
 
@@ -667,6 +702,14 @@ class ButtonManager {
         }
 
         this.buttons.push(button)
+    }
+
+    removeButton(button_id) {
+        const index = this.players.indexOf(this.buttons.find((elem) => elem.id == button_id));
+
+        if (index > -1) {
+            this.players.splice(index, 1);
+        }
     }
 
     getSelectedButton() {
@@ -842,7 +885,7 @@ class DialogElem extends AbstractUiElem {
 }
 
 class PlayerListElem extends AbstractUiElem {
-    constructor(handle, is_master) {
+    constructor(handle) {
         super()
 
         this.players = []
@@ -851,12 +894,9 @@ class PlayerListElem extends AbstractUiElem {
         this.buttonManager = new ButtonManager(handle)
         this.buttonManager.addButton('Start Game')
         this.buttonManager.addButton('Leave Room')
-        this.buttonManager.addButton('Set Ready')
+        this.buttonManager.addButton('Set Ready / Vote Map')
 
-        if (is_master) {
-            this.buttonManager.addButton('Set Computer Count')
-            this.buttonManager.addButton('Set Password')
-        }
+        this.buttonText = this.setProtectionState(false)
     }
 
     emptyPlayers() {
@@ -865,6 +905,32 @@ class PlayerListElem extends AbstractUiElem {
 
     addPlayer(player) {
         this.players.push(player)
+    }
+
+    setMasterState(is_master) {
+        if (is_master) {
+            if (this.buttonManager.buttons.length < 4) {
+                this.buttonManager.addButton('Set Computer Count')
+                this.buttonManager.addButton(this.buttonText)
+                
+                return true
+            }
+        } else {
+            if (this.buttonManager.buttons.length > 3) {
+                this.buttonManager.removeButton(4)
+                this.buttonManager.removeButton(3)
+            }
+        }
+
+        return false
+    }
+
+    setProtectionState(is_protected) {
+        this.buttonText = is_protected ? 'Change Password' : 'Set Password'
+
+        if (this.buttonManager.buttons.length > 3) {
+            this.buttonManager.buttons[4].setText(this.buttonText)
+        }
     }
 
     removePlayer(player) {
@@ -915,6 +981,123 @@ class PlayerListElem extends AbstractUiElem {
                 elem.setDimensions(window.innerWidth / 2 - window.innerWidth / 8, window.innerHeight / 10 + fontSize * 10 + elem.id * (fontSize * 3), window.innerWidth / 4, fontSize + fontSize / 2)
                 elem.draw(ctx)
             });
+        }
+    }
+}
+
+class MapListElem extends AbstractUiElem {
+    constructor() {
+        super()
+
+        this.maps = []
+        this.votes = {}
+
+        this.selectedMap = 0
+    }
+
+    addMap(map) {
+        this.maps.push(map)
+    }
+
+    setVotes(votes) {
+        this.votes = votes
+    }
+
+    clear() {
+        this.maps = []
+    }
+
+    clearVotes() {
+        this.votes = {}
+    }
+
+    getSelectedMap() {
+        return this.maps[this.selectedMap]
+    }
+
+    selectMap(number) {
+        if (this.maps.length == 0) {
+            return
+        }
+
+        if (number < 0) {
+            number = this.maps.length - 1
+        }
+
+        if (number >= this.maps.length) {
+            number = 0
+        }
+
+        this.maps[this.selectedMap].selected = false
+        this.maps[number].selected = true
+        this.selectedMap = number
+    }
+
+    selectPreviousMap() {
+        this.selectMap(this.selectedMap - 1)
+    }
+    
+    selectNextMap() {
+        this.selectMap(this.selectedMap + 1)
+    }
+
+    draw(ctx) {
+        ctx.textAlign = 'center'
+        let fontSize = window.innerHeight / 30
+        ctx.font = fontSize + 'px Arial'
+
+        for (let i = 0; i < 4; i++) {
+            if (this.selectedMap == i) {
+                ctx.strokeStyle = Colors.LightUi
+                ctx.fillStyle = Colors.LightUi
+            } else {
+                ctx.strokeStyle = Colors.DarkUi
+                ctx.fillStyle = Colors.DarkUi
+            }
+
+            let size = window.innerWidth / 6
+
+            if (window.innerHeight / 6 < size) {
+                size = window.innerHeight / 6
+            }
+
+            let spacing = window.innerWidth / 16
+
+            let startX = window.innerWidth / 2 - (size * 2 + spacing + spacing / 2) + i * (size + spacing)
+            let startY = window.innerHeight / 2 + fontSize * 2
+
+            this.roundRect(ctx, startX, startY, size, size)
+
+            ctx.textAlign = 'center'
+
+            if (this.maps.length > i) {
+                this.maps[i].tiles.forEach(element => {
+                    if (element.occupied) {
+                        ctx.fillRect(startX + element.x * (size / 18), startY + element.y * (size / 18), size / 18, size / 18)
+                    }
+                });
+            }
+
+            ctx.shadowBlur = 0
+
+            ctx.fillStyle = Colors.Background
+
+            ctx.fillRect(startX + size / 2 - fontSize, startY + size / 2 - fontSize, fontSize * 2, fontSize * 2)
+
+            ctx.fillStyle = Colors.LightUi
+            ctx.shadowBlur = 2
+
+            let votes = 0
+
+            if (this.maps.length > i) {
+                this.votes.forEach(element => {
+                    if (Object.values(element)[0] == i + 1) {
+                        votes++
+                    }
+                });
+            }
+
+            ctx.fillText(votes, startX + size / 2, startY + size / 2)
         }
     }
 }
@@ -972,9 +1155,9 @@ class TitleTextElem extends AbstractUiElem {
 
     draw(ctx) {
         ctx.textAlign = 'center'
-        let fontSize = window.innerHeight / 60
+        let fontSize = window.innerHeight / 40
         ctx.font = fontSize + 'px Arial'
-        ctx.fillText(this.text, window.innerWidth / 2, window.innerHeight / 10)
+        ctx.fillText(this.text, window.innerWidth / 2, window.innerHeight / 8)
     }
 }
 

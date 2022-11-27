@@ -125,10 +125,14 @@ class GetRoomDataHandler extends AbstractDataHandler {
 }
 
 class JoinRoomDataHandler extends AbstractDataHandler {
-    constructor(handle, room_id, player_id) {
+    constructor(handle, room_id, player_id, password = null) {
         super(handle, 'room/join', 'POST')
         
         this.data = {'room': {'id': room_id}, 'player': {'id': player_id}}
+
+        if (password != null) {
+            this.data['room']['password'] = password
+        }
     }
 }
 
@@ -157,16 +161,18 @@ class StartGameDataHandler extends AbstractDataHandler {
 }
 
 class GetMapsDataHandler extends AbstractDataHandler {
-    constructor(handle) {
+    constructor(handle, room_id) {
         super(handle, 'map/get')
+
+        this.params = {'id': room_id}
     }
 }
 
 class SetReadyDataHandler extends AbstractDataHandler {
-    constructor(handle, player_id) {
+    constructor(handle, player_id, vote) {
         super(handle, 'player/ready', 'POST')
 
-        this.data = {'id': player_id}
+        this.data = {'id': player_id, 'vote': vote}
     }
 }
 
@@ -183,5 +189,13 @@ class StepDataHandler extends AbstractDataHandler {
         super(handle, 'game/step', 'POST')
 
         this.data = {'player': {'id': player_id}, 'steps': steps}
+    }
+}
+
+class SetRoomPasswordDataHandler extends AbstractDataHandler {
+    constructor(handle, room_id, password) {
+        super(handle, 'room/setpw', 'POST')
+
+        this.data = {'id': room_id, 'password': password}
     }
 }
