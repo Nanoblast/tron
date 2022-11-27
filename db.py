@@ -27,8 +27,8 @@ class RoomModel(db.Model):
     
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
-    x = db.Column(db.String, nullable=False)
-    y = db.Column(db.String, nullable=False)
+    x = db.Column(db.Integer, nullable=False)
+    y = db.Column(db.Integer, nullable=False)
     occupied = db.Column(db.Boolean, nullable=False)
     player = db.Column(db.String, nullable=True)
 

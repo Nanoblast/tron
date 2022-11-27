@@ -29,8 +29,8 @@ class RoomModel(db.Model):
 
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
-    x = db.Column(db.String, nullable=False)
-    y = db.Column(db.String, nullable=False)
+    x = db.Column(db.Integer, nullable=False)
+    y = db.Column(db.Integer, nullable=False)
     occupied = db.Column(db.Boolean, nullable=False)
     player = db.Column(db.String, nullable=True)
 
@@ -44,11 +44,12 @@ class GameControl(metaclass=Singleton):
         self.db = db
     
     def startGame(self, room):
+        from maps import BasicMap
         game = {
             "turn": 1,
-            "players": json.loads(room.players)
+            "players": json.loads(room.players),
+            "scheme": BasicMap()
         }
-        print(game)
         self.games.append(game)
         return game
 
@@ -63,11 +64,39 @@ class GameControl(metaclass=Singleton):
             data['player']['id'])
             )
         game = self.findGameByPlayer(player)
-        
+        if not game: return
+        steps = data['steps']
+        for i in range(len(steps)-1):
+            valid, _to = self.validateStep(game, steps[i], steps[i+1])
+            if not valid: 
+                print('false')
+                return False
+            if _to.occupied: 
+                #TODO eliminate
+                
+                print('eliminiate')
+                return True
+            _to.occupied = True
+            _to.player = json.dumps(player)
+            db.session.add(_to)
+            db.session.commit()
+
+
+    def validateStep(self, game, _from, _to):
+        _from = self.loadTile(_from)
+        _to = self.loadTile(_to)
+
+        from_x_y = (_from.x, _from.y)
+        to_x_y = (_to.x, _to.y)
+
+        return to_x_y in game['scheme'].map[from_x_y], _to
+
         #Validating the passed ID with the current players ID
-        if game['players'][int(game['turn'])-1] == player:
-            #TODO GAMING STEPS
-            return
+
+    def loadTile(self, id):
+        return TileModel.query.get(id)
+        
+
         
 player_resouce_fields = {
     'id': fields.String,
@@ -308,12 +337,14 @@ class API(metaclass=Singleton):
         tiles = []
         for i in range(16):
             for j in range(16):
-                tiles.append(serializeTile(TileModel(
+                tile = TileModel(
                     id = str(uuid.uuid4()),
                     x = i+1,
                     y = j+1,
                     occupied = False
-                )))
+                )
+                db.session.add(tile)
+                tiles.append(serializeTile(tile))
         map = MapModel(
             id = str(uuid.uuid4()),
             tiles = (json.dumps(tiles))

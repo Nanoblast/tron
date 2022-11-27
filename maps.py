@@ -14,8 +14,4 @@ class BasicMap(object):
                     #x, y+1
                     (x+1, min(y+2, 16))
                 ]
-    
-if  __name__ == "__main__":
-    map = BasicMap()
-    for i in map.map:
 
