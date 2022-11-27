@@ -7,6 +7,7 @@ import uuid
 import random
 import json
 from flask_cors import CORS, cross_origin
+import statistics
 
 app = Flask(__name__)
 api = Api(app)
@@ -27,6 +28,7 @@ class RoomModel(db.Model):
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
     map = db.Column(db.String, nullable=True)
+    votes = db.Column(db.String, nullable=False)
 
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
@@ -168,7 +170,8 @@ room_resourse_fields = {
     'ready': fields.Boolean,
     'passwd': fields.Integer,
     #Foreing key
-    'map': fields.String
+    'map': fields.String,
+    'votes': fields.String
 }
 
 tile_resource_fields = {
@@ -239,8 +242,13 @@ class API(metaclass=Singleton):
                     if p['id'] == player.id:
                         p['ready'] = True
                     data.append(p)
+                    votes = json.loads(room.votes)
+                    vote = request.get_json()['vote']
+                    votes.append({p['id']:vote})
                 room.players = json.dumps(data)
+                room.votes = json.dumps(votes)
         player.ready = True
+
         db.session.add(player)
         db.session.add(room)
         db.session.commit()
@@ -277,6 +285,7 @@ class API(metaclass=Singleton):
         for room in rooms:
             line = serializeRoom(room)
             line['players'] = json.loads(room.players)
+            line['votes'] = json.loads(room.votes)
             response.append(line)
         return response
     
@@ -295,6 +304,7 @@ class API(metaclass=Singleton):
             return 'Invalid information'
         response = serializeRoom(room)
         response['players'] = json.loads(room.players)
+        response['votes'] = json.loads(room.votes)
         return response
 
 
@@ -319,7 +329,8 @@ class API(metaclass=Singleton):
             master = player.id,
             players = json.dumps([serializePlayer(player)]),
             ready = False,
-            passwd = random.randint(1000,9999)
+            passwd = random.randint(1000,9999),
+            votes = json.dumps([])
         )
 
         tiles = []
@@ -337,12 +348,13 @@ class API(metaclass=Singleton):
             id = str(uuid.uuid4()),
             tiles = (json.dumps(tiles))
         )
-        room.map = map.id
+        room.map = json.dumps([map.id])
         db.session.add(map)
         db.session.add(room)
         db.session.commit()
         response = serializeRoom(room)
         response['players'] = json.loads(room.players)
+        response['votes'] = json.loads(room.votes)
         return response
 
 
@@ -382,7 +394,8 @@ class API(metaclass=Singleton):
         db.session.add(room)
         db.session.commit()
         response = serializeRoom(room)
-        response['players'] = json.loads(room.players) 
+        response['players'] = json.loads(room.players)
+        response['votes'] = json.loads(room.votes) 
         return response
 
     '''
@@ -415,11 +428,17 @@ class API(metaclass=Singleton):
         players.remove(s_leaving_player)
         room.players = json.dumps(players)
         leaving_player.ready = False
+        votes = json.loads(room.votes)
+        for vote in votes:
+            if leaving_player.id in vote:
+                votes.remove(vote)
+        room.votes = json.dumps(votes)
         db.session.add(leaving_player)
         db.session.add(room)
         db.session.commit()
         response = serializeRoom(room)
-        response['players'] = json.loads(room.players) 
+        response['players'] = json.loads(room.players)
+        response['votes'] = json.loads(room.votes)
         return response
     
 
@@ -438,6 +457,10 @@ class API(metaclass=Singleton):
         #room = RoomModel.query.get(data['room']['id'])
         #if not room:
         #    return 'Invalid information'
+        room_id = request.args.get('id')
+        room = RoomModel.query.get(room_id)
+        if not room:
+            return "Missing room information", 406
         response = []
         tiles = []
         for i in range(16):
@@ -454,6 +477,7 @@ class API(metaclass=Singleton):
             id = str(uuid.uuid4()),
             tiles = (json.dumps(tiles))
         )
+        maps = [{"id":map.id}]
         db.session.add(map)
         response.append({
             'id': map.id,
@@ -476,11 +500,14 @@ class API(metaclass=Singleton):
                 id = str(uuid.uuid4()),
                 tiles = (json.dumps(tiles))
             )
+            maps.append({"id":map.id})
             db.session.add(map)
             response.append({
             'id': map.id,
             'tiles': tiles
         })
+        room.map = json.dumps(maps)
+        db.session.add(map)
         db.session.commit()
         
         return response
@@ -508,7 +535,14 @@ class API(metaclass=Singleton):
         if not room:
             return 'Invalid room', 406
         if(len(json.loads(room.players)) < 2 ):
-            return 'Not enogh players to start the game!', 406
+            return 'Not enough players to start the game!', 406
+        votes = []
+        for vote in json.loads(room.votes):
+            values = vote.values()
+            votes.append((list(values))[0])
+        winner_map = statistics.mode(votes)
+        maps = json.loads(room.map)
+        room.map = maps[winner_map-1]['id']
         game = control.startGame(room)
         room.ready = True
         db.session.add(room)
@@ -525,7 +559,8 @@ class API(metaclass=Singleton):
             'number_of_players': len(game['players']),
             'current_player': game['current_player'],
             'map' : game['map'],
-            'history': game['history']
+            'history': game['history'],
+            'players': game['players']
         }
 
 player_put_args = reqparse.RequestParser()

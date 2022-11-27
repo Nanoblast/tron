@@ -26,6 +26,7 @@ class RoomModel(db.Model):
     ready = db.Column(db.Boolean, nullable=False)
     passwd = db.Column(db.Integer, nullable=False)
     map = db.Column(db.String, nullable=True)
+    votes = db.Column(db.String, nullable=False)
     
 class TileModel(db.Model):
     id = db.Column(db.String, primary_key=True)
