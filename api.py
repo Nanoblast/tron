@@ -209,6 +209,7 @@ class API(metaclass=Singleton):
         response['players'] = json.loads(room.players)
         return response
 
+
     '''
     {
         "player":
@@ -399,6 +400,9 @@ class API(metaclass=Singleton):
         if not room:
             return 'Invalid room', 406
         game = control.startGame(room)
+        room.ready = True
+        db.session.add(room)
+        db.session.commit()
         return 'Game started! ' + 'Player ' + str(game['turn']) +'\'s turn to step!' , 201
 
 
