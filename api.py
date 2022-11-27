@@ -187,8 +187,18 @@ class API(metaclass=Singleton):
         if not 'id' in data:
             return 'missing ID', 406
         player = PlayerModel.query.get(data['id'])
+        rooms = RoomModel.query.all()
+        for room in rooms:
+            if json.dumps(serializePlayer(player)) in room.players:
+                data = []
+                for p in json.loads(room.players):
+                    if p['id'] == player.id:
+                        p['ready'] = True
+                    data.append(p)
+                room.players = json.dumps(data)
         player.ready = True
         db.session.add(player)
+        db.session.add(room)
         db.session.commit()
         return serializePlayer(player), 201
     
@@ -239,7 +249,7 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(id)
         if not room:
             return 'Invalid information'
-        response = serializeRoom(room)
+        
         response['players'] = json.loads(room.players)
         return response
 
