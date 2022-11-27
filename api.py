@@ -508,7 +508,7 @@ class API(metaclass=Singleton):
         if not room:
             return 'Invalid room', 406
         if(len(json.loads(room.players)) < 2 ):
-            return 'Not enogh players to start the game!'
+            return 'Not enogh players to start the game!', 406
         game = control.startGame(room)
         room.ready = True
         db.session.add(room)
