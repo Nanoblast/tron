@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Labyritron</title>
+        <meta charset="UTF-8">
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/canvg/1.4/rgbcolor.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/canvg/dist/browser/canvg.js"></script>
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" type="text/css">
+        <script type="text/javascript" src="client/js/data.js"></script>
+        <script type="text/javascript" src="client/js/graphics.js"></script>
+        <script type="text/javascript" src="client/js/control.js"></script>
+        <style>
+            * { padding: 0; margin: 0; }
+            body {background-color: #0a0f15;}
+            #gameField { display: block; width: 100vw;height: 100vh;}
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <canvas id="gameField" style="touch-action: manipulation;"></canvas>
+        </div>
+        <script>
+            let game = new SceneManager();
+
+            window.onload = function() {
+                game.init()
+            }
+        </script>
+    </body>
+</html>
