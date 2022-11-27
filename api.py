@@ -119,8 +119,12 @@ class GameControl(metaclass=Singleton):
         return game['players'][turn_index]['id']
 
     def updateXY(self, _from, _to, game, player):
+
         for i in range(len(game['map'])):
             if game['map'][i]['x'] == _from['x'] and game['map'][i]['y'] == _from['y']:
+                if[game['map'][i]['occupied']] is True and [game['map'][i]['player']] is None:
+                    self.killPlayer(player, game)
+                    return True
                 game['map'][i]['occupied'] = True
             if game['map'][i]['x'] == _to['x'] and game['map'][i]['y'] == _to['y']:
                 if str(game['map'][i]['player']) != "None":
