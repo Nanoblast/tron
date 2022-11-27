@@ -46,7 +46,7 @@ class GameControl(metaclass=Singleton):
     
     def startGame(self, room):
         from maps import BasicMap
-        steps = {
+        self.steps = {
             1: [],
             2: [],
             3: [],
@@ -56,9 +56,18 @@ class GameControl(metaclass=Singleton):
             "turn": 1,
             "current_player": json.loads(room.players)[0],
             "players": json.loads(room.players),
-            "scheme": BasicMap()
+            "map": []
         }
+        map = MapModel.query.get(room.map)
+        tiles = json.loads(map.tiles)
+        for t in tiles:
+            if t['x'] == 1 and t['y'] == 1 : t['player'] = game['players'][0]['id']
+            if t['x'] == 1 and t['y'] == 16 : t['player'] = game['players'][1]['id']
+            if t['x'] == 16 and t['y'] == 1 : t['player'] = game['players'][2]['id']
+            if t['x'] == 16 and t['y'] == 16: t['player'] = game['players'][3]['id']
+        game['map'] = tiles
         self.games.append(game)
+        print(game)
         return game
 
     def getState(self, player_id):
@@ -277,6 +286,24 @@ class API(metaclass=Singleton):
             ready = False,
             passwd = random.randint(1000,9999)
         )
+
+        tiles = []
+        for i in range(16):
+            for j in range(16):
+                tile = TileModel(
+                    id = str(uuid.uuid4()),
+                    x = i+1,
+                    y = j+1,
+                    occupied = False
+                )
+                db.session.add(tile)
+                tiles.append(serializeTile(tile))
+        map = MapModel(
+            id = str(uuid.uuid4()),
+            tiles = (json.dumps(tiles))
+        )
+        room.map = map.id
+        db.session.add(map)
         db.session.add(room)
         db.session.commit()
         response = serializeRoom(room)
@@ -457,7 +484,8 @@ class API(metaclass=Singleton):
             return 'Game not found', 406
         return {
             'turn': game['turn'],
-            'current_player': game['current_player']
+            'current_player': game['current_player'],
+            'map' : game['map']
         }
 
 player_put_args = reqparse.RequestParser()
