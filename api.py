@@ -324,15 +324,14 @@ class API(metaclass=Singleton):
         }
     }
     '''
-    @app.route('/map/create', methods=['GET'])
+
+    @app.route('/map/get', methods=['GET'])
     #@marshal_with(map_resource_fields)
-    def createMap():
-        data = request.get_json()
-        if not data['room']:
-            return 'Missing room information', 406
-        room = RoomModel.query.get(data['room']['id'])
-        if not room:
-            return 'Invalid information'
+    def getMap():
+        #room = RoomModel.query.get(data['room']['id'])
+        #if not room:
+        #    return 'Invalid information'
+        response = []
         tiles = []
         for i in range(16):
             for j in range(16):
@@ -348,14 +347,35 @@ class API(metaclass=Singleton):
             id = str(uuid.uuid4()),
             tiles = (json.dumps(tiles))
         )
-        room.map = map.id
         db.session.add(map)
-        db.session.commit()
-
-        response = {
+        response.append({
             'id': map.id,
             'tiles': tiles
-        }
+        })
+        for m in range(4):
+            tiles = []
+            for i in range(16):
+                for j in range(16):
+                    occupied  = True if random.randint(1,10) < m else False
+                    tile = TileModel(
+                        id = str(uuid.uuid4()),
+                        x = i+1,
+                        y = j+1,
+                        occupied = occupied
+                    )
+                    db.session.add(tile)
+                    tiles.append(serializeTile(tile))
+            map = MapModel(
+                id = str(uuid.uuid4()),
+                tiles = (json.dumps(tiles))
+            )
+            db.session.add(map)
+            response.append({
+            'id': map.id,
+            'tiles': tiles
+        })
+        db.session.commit()
+        
         return response
     
     @app.route('/game/step', methods=['POST'])
