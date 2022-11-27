@@ -54,7 +54,7 @@ class GameControl(metaclass=Singleton):
         }
         game = {
             "turn": 1,
-            "current_player": json.loads(room.players)[0],
+            "current_player": json.loads(room.players)[0]['name'],
             "players": json.loads(room.players),
             "map": []
         }
@@ -98,13 +98,21 @@ class GameControl(metaclass=Singleton):
         for i in range(len(steps)-1):
             valid = self.validateStep(game, steps[i], steps[i+1])
             if not valid: 
+                print('invalid')
                 return False
             self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
+            game['current_player'] = self.getNextPlayer(game)
+            game['turn'] += 1
+            return game['current_player']
             return True
             _to.occupied = True
             _to.player = json.dumps(player)
             db.session.add(_to)
             db.session.commit()
+
+    def getNextPlayer(self, game):
+        turn_index = game['turn'] % (len(game['players']))
+        return game['players'][turn_index]['name']
 
     def updateXY(self, x, y, game, player):
         for i in range(len(game['map'])):
@@ -467,8 +475,10 @@ class API(metaclass=Singleton):
             return 'Missing player information', 406
         if not data['steps']:
             return 'Missing movement information', 406'''
-        control.step(data)
-        return 'Done'
+        next_player = control.step(data)
+        if not next_player:
+            return "invalid step"
+        return 'Done! Next player: ' + str(next_player)
 
     @app.route('/game/start', methods=['POST'])
     def startGame():
@@ -484,8 +494,7 @@ class API(metaclass=Singleton):
         room.ready = True
         db.session.add(room)
         db.session.commit()
-        return 'Game started! ' + 'Player ' + str(game['turn']) +'\'s turn to step!' , 201
-
+        return 'Game started! Next_player ' + game['current_player']
     @app.route('/game/state', methods=['GET'])
     def getState():
         player_id = request.args.get('id')
