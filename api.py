@@ -132,7 +132,7 @@ class GameControl(metaclass=Singleton):
         print("kill")
         for tile in game['map']:
             if tile['player'] == player['id']:
-                tile['player'] = "None"
+                tile['player'] = None
                 tile['occupied'] = False
         for i in range(len(game['players'])):
             print('xxx',i, len(game['players']))
@@ -507,6 +507,8 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(data['room']['id'])
         if not room:
             return 'Invalid room', 406
+        if(len(json.loads(room.players)) < 2 ):
+            return 'Not enogh players to start the game!'
         game = control.startGame(room)
         room.ready = True
         db.session.add(room)
