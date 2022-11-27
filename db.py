@@ -24,7 +24,7 @@ class RoomModel(db.Model):
     master = db.Column(db.String, nullable=False)
     players = db.Column(db.String, nullable=False)
     ready = db.Column(db.Boolean, nullable=False)
-    passwd = db.Column(db.Integer, nullable=False)
+    passwd = db.Column(db.Integer, nullable=True)
     map = db.Column(db.String, nullable=True)
     votes = db.Column(db.String, nullable=False)
     

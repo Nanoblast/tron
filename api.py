@@ -26,7 +26,7 @@ class RoomModel(db.Model):
     master = db.Column(db.String, nullable=False)
     players = db.Column(db.String, nullable=False)
     ready = db.Column(db.Boolean, nullable=False)
-    passwd = db.Column(db.Integer, nullable=False)
+    passwd = db.Column(db.Integer, nullable=True)
     map = db.Column(db.String, nullable=True)
     votes = db.Column(db.String, nullable=False)
 
@@ -286,6 +286,8 @@ class API(metaclass=Singleton):
             line = serializeRoom(room)
             line['players'] = json.loads(room.players)
             line['votes'] = json.loads(room.votes)
+            line['protected'] = False if room.passwd is None else True
+
             response.append(line)
         return response
     
@@ -305,6 +307,7 @@ class API(metaclass=Singleton):
         response = serializeRoom(room)
         response['players'] = json.loads(room.players)
         response['votes'] = json.loads(room.votes)
+        response['protected'] = True if room.passwd else False
         return response
 
 
@@ -329,7 +332,6 @@ class API(metaclass=Singleton):
             master = player.id,
             players = json.dumps([serializePlayer(player)]),
             ready = False,
-            passwd = random.randint(1000,9999),
             votes = json.dumps([])
         )
 
@@ -355,6 +357,7 @@ class API(metaclass=Singleton):
         response = serializeRoom(room)
         response['players'] = json.loads(room.players)
         response['votes'] = json.loads(room.votes)
+        response['protected'] = False if room.passwd is None else True
         return response
 
 
@@ -382,6 +385,10 @@ class API(metaclass=Singleton):
         room = RoomModel.query.get(room_id)
         if not room:
             return 'Invalid information', 406
+        if room.passwd is not None:
+            if not 'password' in data['room'] or data['room']['password'] != room.passwd:
+                return "Invalid password", 401
+        
         players = json.loads(room.players)
         new_player = PlayerModel.query.get(data['player']['id'])
         new_player = serializePlayer(new_player)
@@ -411,6 +418,19 @@ class API(metaclass=Singleton):
         }
     }
     '''
+    @app.route('/room/setpw', methods=['POST'])
+    def setPw():
+        data = request.get_json()
+        if not data['id']:
+            return 'Missing room information', 406
+        if not data['password']:
+            return "Missing pw information!", 406
+        room = RoomModel.query.get(data['id'])
+        room.passwd = data['password']
+        db.session.add(room)
+        db.session.commit()
+        return "Success", 200
+
     @app.route('/room/leave', methods=['POST'])
     def leaveRoom():
         data = request.get_json()
@@ -543,6 +563,9 @@ class API(metaclass=Singleton):
         winner_map = statistics.mode(votes)
         maps = json.loads(room.map)
         room.map = maps[winner_map-1]['id']
+        for player in json.loads(room.players):
+            if player['ready'] is False:
+                return "There is an unready player in the room", 401
         game = control.startGame(room)
         room.ready = True
         db.session.add(room)
