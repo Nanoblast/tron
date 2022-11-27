@@ -59,6 +59,28 @@ class TronGameScene extends AbstractScene {
 
         this.canvasHandler.addElement(new Map(this.canvasHandler, 16, 16))
         this.canvasHandler.getElement(0).addPlayer(this.player.x, this.player.y)
+
+        this.intervalId = null
+
+        this.getStateData()
+    }
+
+    halt() {
+        if (this.intervalId != null) {
+            clearInterval(this.intervalId)
+        }
+
+        super.halt()
+    }
+
+    getStateData() {
+        new GetGameStateDataHandler(this, this.manager.player_id)
+        .setErrorCallback(this.genericErrorHandlerFunction)
+        .startRequest((handle, data) => {
+            if (this.intervalId == null) {
+                this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
+            }
+        })
     }
 
     onKeyPressed(e) {

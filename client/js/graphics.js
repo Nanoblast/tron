@@ -733,7 +733,9 @@ class DialogElem extends AbstractUiElem {
         } else if (e.keyCode === 9) {
             this.buttonManager.selectNextButton()
         } else {
-            this.options[this.selectedOption].addCharacter(e)
+            if (this.options.length > this.selectedOption) {
+                this.options[this.selectedOption].addCharacter(e)
+            }
         }
     }
 

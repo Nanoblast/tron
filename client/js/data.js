@@ -158,7 +158,7 @@ class StartGameDataHandler extends AbstractDataHandler {
 
 class GetMapsDataHandler extends AbstractDataHandler {
     constructor(handle) {
-        super(handle, 'map/get', 'GET')
+        super(handle, 'map/get')
     }
 }
 
@@ -167,5 +167,13 @@ class SetReadyDataHandler extends AbstractDataHandler {
         super(handle, 'player/ready', 'POST')
 
         this.data = {'id': player_id}
+    }
+}
+
+class GetGameStateDataHandler extends AbstractDataHandler {
+    constructor(handle, player_id) {
+        super(handle, 'game/state')
+
+        this.params = {'id': player_id}
     }
 }
