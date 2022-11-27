@@ -96,29 +96,32 @@ class GameControl(metaclass=Singleton):
         if not game: return
         steps = data['steps']
         for i in range(len(steps)-1):
-            valid, _to = self.validateStep(game, steps[i], steps[i+1])
+            valid = self.validateStep(game, steps[i], steps[i+1])
             if not valid: 
-                print('false')
                 return False
-            if _to.occupied: 
-                #TODO eliminate
-                
-                print('eliminiate')
-                return True
+            self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
+            return True
             _to.occupied = True
             _to.player = json.dumps(player)
             db.session.add(_to)
             db.session.commit()
 
-
+    def updateXY(self, x, y, game, player):
+        for i in range(len(game['map'])):
+            if game['map'][i]['x'] == x and game['map'][i]['y'] == y:
+                if str(game['map'][i]['player']) != "None":
+                    self.killPlayer(player)
+                else:
+                    game['map'][i]['player'] = player['id']
+                return
+        return True
+    def killPlayer(self, player):
+        print('KILL')
     def validateStep(self, game, _from, _to):
-        _from = self.loadTile(_from)
-        _to = self.loadTile(_to)
-
-        from_x_y = (_from.x, _from.y)
-        to_x_y = (_to.x, _to.y)
-
-        return to_x_y in game['scheme'].map[from_x_y], _to
+        #ezért a pokolban fogok elégni
+        if (abs(int(_from['x']) - int(_to['x'])) >= 0 and abs(int(_from['x']) - int(_to['x'])) <= 1) and (abs(int(_from['y']) - int(_to['y'])) >= 0 and abs(int(_from['y']) - int(_to['y'])) <= 1 and (abs(int(_from['x']) - int(_to['x'])) + abs(int(_from['y']) - int(_to['y'])) == 1)) :
+            return True
+        return False
 
         #Validating the passed ID with the current players ID
 
