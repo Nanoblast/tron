@@ -53,6 +53,8 @@ class TronGameScene extends AbstractScene {
         this.player = new Tron(4, 4)
         this.dialog = null
         this.map = null
+        this.hasGameStarted = false
+        this.activePlayer = null
 
         this.playerIdToColor = {}
     }
@@ -61,8 +63,10 @@ class TronGameScene extends AbstractScene {
         super.init()
 
         this.map = new Map(this.canvasHandler, 16, 16)
+        this.notifyElem = new NotificationElem()
 
         this.canvasHandler.addElement(this.map)
+        this.canvasHandler.addElement(this.notifyElem)
 
         this.intervalId = null
 
@@ -79,12 +83,63 @@ class TronGameScene extends AbstractScene {
 
     getStateData() {
         new GetGameStateDataHandler(this, this.manager.player_id)
-        .setErrorCallback(this.genericErrorHandlerFunction)
-        .startRequest((handle, data) => {
-            handle.map.clear()
+        .setErrorCallback((handle, status, response) => {
+            if (handle.dialog != null) {
+                handle.dialog.close()
+            }
+    
+            if (status === 0) {
+                response = 'Could not connect to the server'
+            }
 
+            if (this.intervalId != null) {
+                clearInterval(this.intervalId)
+                this.intervalId = null
+            }
+    
+            if (handle.hasGameStarted) {
+                handle.dialog = new GameOverDialog(handle, false)
+            } else {
+                handle.dialog = new ErrorDialog(handle, response)
+            }
+            handle.dialog.setCloseCallback((handle) => {
+                if (handle.hasGameStarted) {
+                    handle.manager.room_id = null
+                    handle.manager.changeScene(new RoomListScene(handle.manager))
+                } else {
+                    handle.canvasHandler.removeElement(handle.dialog)
+                    handle.dialog = null
+
+                    if (this.intervalId == null) {
+                        this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
+                    }
+                }
+            })
+            handle.canvasHandler.addElement(handle.dialog)
+        })
+        .startRequest((handle, data) => {
             let playerTiles = []
             let lineTiles = []
+
+            if (handle.hasGameStarted && data['number_of_players'] == 1) {
+                handle.dialog = new GameOverDialog(handle, true)
+
+                if (this.intervalId != null) {
+                    clearInterval(this.intervalId)
+                    this.intervalId = null
+                }
+
+                handle.dialog.setCloseCallback((handle) => {
+                    handle.manager.room_id = null
+                    handle.manager.changeScene(new RoomListScene(handle.manager))
+                })
+
+                handle.canvasHandler.addElement(handle.dialog)
+
+                return
+            }
+
+            handle.map.clear()
 
             data['map'].forEach(element => {
                 if (element['player'] != null) {
@@ -95,6 +150,14 @@ class TronGameScene extends AbstractScene {
                     }
                 }
             });
+
+            if (handle.manager.player_id == data['current_player'] && this.activePlayer != data['current_player']) {
+                this.notifyElem.setText('Your turn!')
+            } else if (handle.activePlayer != data['current_player'] && handle.activePlayer != handle.manager.player_id) {
+                this.notifyElem.setText("Other's turn!")
+            }
+
+            handle.activePlayer = data['current_player']
 
             let currentPlayer = playerTiles.find((elem) => elem.player == handle.manager.player_id)
 
@@ -162,6 +225,8 @@ class TronGameScene extends AbstractScene {
             if (this.intervalId == null) {
                 this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
             }
+
+            this.hasGameStarted = true
         })
     }
 
@@ -218,7 +283,7 @@ class TronGameScene extends AbstractScene {
             })
         }
 
-        if (validMovement > 0) {
+        if (validMovement > 0 && this.activePlayer == this.manager.player_id) {
             let newX = lastCoord.x
             let newY = lastCoord.y
 
@@ -248,7 +313,10 @@ class TronGameScene extends AbstractScene {
             let newMovement = new PendingMove(newX, newY);
 
             this.pendingMovements.push(newMovement)
-            this.canvasHandler.getElement(0).addPendingMove(newMovement.x, newMovement.y, 0)
+
+            let playerColor = Object.keys(this.playerIdToColor).length > 0 ? this.playerIdToColor[this.manager.player_id] : 0
+
+            this.canvasHandler.getElement(0).addPendingMove(newMovement.x, newMovement.y, playerColor)
         }
     }
 }

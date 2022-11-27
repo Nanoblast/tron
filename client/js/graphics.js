@@ -919,6 +919,29 @@ class PlayerListElem extends AbstractUiElem {
     }
 }
 
+class GameOverDialog extends DialogElem {
+    constructor(handle, has_won) {
+        super(handle, false)
+
+        this.has_won = has_won
+
+        this.buttonManager.setButtonCallback(0, (handle, options) => {
+            handle.dialog.close()
+        })
+    }
+
+    draw(ctx) {
+        super.draw(ctx)
+
+        ctx.textAlign = 'center'
+        let fontSize = window.innerHeight / 30
+        ctx.font = fontSize + 'px Arial'
+        ctx.fillStyle = Colors.LightUi
+
+        ctx.fillText(this.has_won ? 'You have won!' : 'You have lost!', this.startX + this.rectWidth / 2, this.startY + this.rectHeight / 2)
+    }
+}
+
 class ErrorDialog extends DialogElem {
     constructor(handle, text) {
         super(handle, false)
@@ -952,6 +975,42 @@ class TitleTextElem extends AbstractUiElem {
         let fontSize = window.innerHeight / 60
         ctx.font = fontSize + 'px Arial'
         ctx.fillText(this.text, window.innerWidth / 2, window.innerHeight / 10)
+    }
+}
+
+class NotificationElem extends AbstractUiElem {
+    constructor() {
+        super()
+
+        this.text = null
+    }
+
+    removeText() {
+        this.text = null
+    }
+
+    setText(text) {
+        this.text = text
+
+        window.setTimeout(this.removeText.bind(this), 1000);
+    }
+
+    draw(ctx) {
+        if (this.text != null) {
+            ctx.strokeStyle = Colors.LightUi
+            ctx.fillStyle = Colors.Background
+
+            ctx.textAlign = 'center'
+            let fontSize = window.innerHeight / 30
+            ctx.font = fontSize + 'px Arial'
+
+            this.roundRect(ctx, window.innerWidth / 2 - window.innerWidth / 6, window.innerHeight / 2 - 2 * fontSize, window.innerWidth / 3, 4 * fontSize, 5, true)
+            this.roundRect(ctx, window.innerWidth / 2 - window.innerWidth / 6, window.innerHeight / 2 - 2 * fontSize, window.innerWidth / 3, 4 * fontSize)
+            
+            ctx.fillStyle = Colors.LightUi
+
+            ctx.fillText(this.text, window.innerWidth / 2, window.innerHeight / 2)
+        }
     }
 }
 
