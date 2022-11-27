@@ -46,15 +46,10 @@ class GameControl(metaclass=Singleton):
     
     def startGame(self, room):
         from maps import BasicMap
-        self.steps = {
-            1: [],
-            2: [],
-            3: [],
-            4: []
-        }
+        self.steps = {}
         game = {
             "turn": 1,
-            "current_player": json.loads(room.players)[0]['name'],
+            "current_player": json.loads(room.players)[0]['id'],
             "players": json.loads(room.players),
             "map": []
         }
@@ -63,16 +58,16 @@ class GameControl(metaclass=Singleton):
         for t in tiles:
             if t['x'] == 1 and t['y'] == 1 : 
                 t['player'] = game['players'][0]['id']
-                self.steps[1].append((t['x'], t['y']))
+                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
             if t['x'] == 1 and t['y'] == 16 : 
                 t['player'] = game['players'][1]['id']
-                self.steps[2].append((t['x'], t['y']))
+                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
             if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2:
                 t['player'] = game['players'][2]['id'] 
-                self.steps[3].append((t['x'], t['y']))
+                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
             if t['x'] == 16 and t['y'] == 16 and len(game['players']) > 3: 
                 t['player']= game['players'][3]['id']
-                self.steps[1].append((t['x'], t['y']))
+                self.steps[t['player']] = [{"x": t['x'], "y":t["y"]}]
         game['map'] = tiles
         self.games.append(game)
         return game
@@ -95,14 +90,22 @@ class GameControl(metaclass=Singleton):
         game = self.findGameByPlayer(player)
         if not game: return
         steps = data['steps']
+
+        if self.steps[player['id']][-1]['x'] != steps[0]['x'] or self.steps[player['id']][-1]['y'] != steps[0]['y']:
+            return False
+        if game['current_player'] != player['id']:
+            return False
         for i in range(len(steps)-1):
             valid = self.validateStep(game, steps[i], steps[i+1])
             if not valid: 
                 print('invalid')
                 return False
+            
             self.updateXY(steps[i+1]['x'], steps[i+1]['y'], game, player)
             game['current_player'] = self.getNextPlayer(game)
             game['turn'] += 1
+            self.steps[player['id']].append(steps[i+1])
+            print(self.steps)
             return game['current_player']
             return True
             _to.occupied = True
@@ -112,7 +115,7 @@ class GameControl(metaclass=Singleton):
 
     def getNextPlayer(self, game):
         turn_index = game['turn'] % (len(game['players']))
-        return game['players'][turn_index]['name']
+        return game['players'][turn_index]['id']
 
     def updateXY(self, x, y, game, player):
         for i in range(len(game['map'])):
