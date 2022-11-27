@@ -63,8 +63,8 @@ class GameControl(metaclass=Singleton):
         for t in tiles:
             if t['x'] == 1 and t['y'] == 1 : t['player'] = game['players'][0]['id']
             if t['x'] == 1 and t['y'] == 16 : t['player'] = game['players'][1]['id']
-            if t['x'] == 16 and t['y'] == 1 : t['player'] = game['players'][2]['id']
-            if t['x'] == 16 and t['y'] == 16: t['player'] = game['players'][3]['id']
+            if t['x'] == 16 and t['y'] == 1 and len(game['players']) > 2: t['player'] = game['players'][2]['id'] 
+            if t['x'] == 16 and t['y'] == 16 and len(game['players']) > 3: t['player']= game['players'][3]['id']
         game['map'] = tiles
         self.games.append(game)
         print(game)
