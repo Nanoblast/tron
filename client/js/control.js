@@ -53,6 +53,8 @@ class TronGameScene extends AbstractScene {
         this.player = new Tron(4, 4)
         this.dialog = null
         this.map = null
+
+        this.playerIdToColor = {}
     }
 
     init() {
@@ -108,8 +110,8 @@ class TronGameScene extends AbstractScene {
             }
 
             playerTiles.sort((a, b) => {
-                let rearranged1 = rearrangeId(a.id)
-                let rearranged2 = rearrangeId(b.id)
+                let rearranged1 = rearrangeId(a.player)
+                let rearranged2 = rearrangeId(b.player)
               
                 if (rearranged1 > rearranged2) {
                   return 1
@@ -118,13 +120,44 @@ class TronGameScene extends AbstractScene {
                 return -1
             })
 
-            for (let i = 0; i < playerTiles.length; i++) {
-                handle.map.addPlayer(playerTiles[i].x - 1, playerTiles[i].y - 1, i)
+            /* Making the color permanent */
+            if (Object.keys(handle.playerIdToColor).length == 0) {
+                for (let i = 0; i < playerTiles.length; i++) {
+                    handle.playerIdToColor[playerTiles[i].player] = i
+                }
             }
 
-            lineTiles.forEach(element => {
-                handle.map.addLine(element.x - 1, element.y - 1, 0, Directions.Up, Directions.Down)
-            });
+            for (let i = 0; i < playerTiles.length; i++) {
+                handle.map.addPlayer(playerTiles[i].x - 1, playerTiles[i].y - 1, handle.playerIdToColor[playerTiles[i].player])
+
+                let steps = data['history'][playerTiles[i].player]
+
+                let lastDirection = Directions.Right
+
+                for (let j = 0; j < steps.length - 1; j++) {
+                    let diff = {'x': steps[j].x - steps[j + 1].x, 'y': steps[j].y - steps[j + 1].y}
+
+                    let newDirection = null
+
+                    if (diff.x < 0) {
+                        newDirection = Directions.Right
+                    } else if (diff.x > 0) {
+                        newDirection = Directions.Left
+                    } else if (diff.y > 0) {
+                        newDirection = Directions.Up
+                    } else if (diff.y < 0) {
+                        newDirection = Directions.Down
+                    }
+
+                    handle.map.addLine(steps[j].x - 1, steps[j].y - 1, handle.playerIdToColor[playerTiles[i].player], Directions.negate(lastDirection), newDirection)
+
+                    if (j == steps.length - 2) {
+                        handle.map.setPlayerDirection(steps[steps.length - 1].x - 1, steps[steps.length - 1].y - 1, newDirection)
+                    }
+
+                    lastDirection = newDirection
+                }
+            }
 
             if (this.intervalId == null) {
                 this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
@@ -143,7 +176,7 @@ class TronGameScene extends AbstractScene {
         if (this.pendingMovements.length > 0) {
             lastCoord = this.pendingMovements[this.pendingMovements.length - 1]
         } else {
-            lastCoord = new PendingMove(this.player.y, this.player.x)
+            lastCoord = new PendingMove(this.player.x, this.player.y)
         }
 
         let validMovement = 0
@@ -165,12 +198,8 @@ class TronGameScene extends AbstractScene {
                 validMovement = Directions.Down
             }
         } else if (e.keyCode === 27) {
-            // TODO: This is temporary
-            new LeaveRoomDataHandler(this, this.manager.room_id, this.manager.player_id)
-            .setErrorCallback(this.genericErrorHandlerFunction)
-            .startRequest((handle, data) => {
-                handle.manager.changeScene(new RoomListScene(handle.manager))
-            })
+            this.pendingMovements = []
+            this.map.clearPendingMoves()
         } else if (e.keyCode === 13) {
             let steps = []
 
@@ -184,6 +213,7 @@ class TronGameScene extends AbstractScene {
             .setErrorCallback(this.genericErrorHandlerFunction)
             .startRequest((handle, data) => {
                 this.pendingMovements = []
+                this.map.clearPendingMoves()
                 handle.getStateData()
             })
         }
@@ -310,6 +340,10 @@ class RoomDetailScene extends AbstractScene {
             data['players'].forEach(element => {
                 handle.playerList.addPlayer(element)
             });
+
+            if (data['ready']) {
+                handle.manager.changeScene(new TronGameScene(handle.manager))
+            }
 
             if (this.intervalId == null) {
                 this.intervalId = setInterval(this.getRoomData.bind(handle), 5000)

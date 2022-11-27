@@ -4,7 +4,20 @@ const Directions = {
 	Up: 1,
 	Left: 2,
 	Right: 3,
-	Down: 4
+	Down: 4,
+
+    negate(dir) {
+        switch(dir) {
+            case Directions.Up:
+                return Directions.Down
+            case Directions.Left:
+                return Directions.Right
+            case Directions.Right:
+                return Directions.Left
+            case Directions.Down:
+                return Directions.Up
+        }
+    }
 }
 
 const OptionType = {
@@ -337,8 +350,10 @@ class Map extends AbstractUiElem {
         this.width = width
         this.height = height
         this.tiles = Array.from(Array(height), () => new Array(width))
+        this.pendingMoves = Array.from(Array(height), () => new Array(width))
 
         this.clear()
+        this.clearPendingMoves()
     }
 
     clear() {
@@ -349,8 +364,16 @@ class Map extends AbstractUiElem {
         }
     }
 
+    clearPendingMoves() {
+        for (let i = 0; i < this.height; i++) {
+            for (let j = 0; j < this.width; j++) {
+                this.pendingMoves[i][j] = null;
+            }
+        }
+    }
+
     addPendingMove(x, y, player_id) {
-        this.tiles[y][x] = new PendingMoveElem(this, x, y, player_id)
+        this.pendingMoves[y][x] = new PendingMoveElem(this, x, y, player_id)
     }
 
     addLine(x, y, player_id, from, to) {
@@ -362,7 +385,9 @@ class Map extends AbstractUiElem {
     }
 
     setPlayerDirection(x, y, dir) {
-        this.tiles[y][x].setDirection(dir)
+        if (this.tiles[y][x] != null) {
+            this.tiles[y][x].setDirection(dir)
+        }
     }
 
     draw(ctx) {
@@ -377,6 +402,10 @@ class Map extends AbstractUiElem {
                     empty.draw(ctx)
                 } else {
                     this.tiles[i][j].draw(ctx)
+                }
+
+                if (this.pendingMoves[i][j] != null) {
+                    this.pendingMoves[i][j].draw(ctx)
                 }
             }
         }
