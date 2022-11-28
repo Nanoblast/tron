@@ -5,7 +5,26 @@ class AbstractScene {
         this.manager = manager
         this.canvasHandler = new CanvasHandler();
 
-        this.eventListener = this.onKeyPressed.bind(this)
+        this.eventListener = this.superKeyPressed.bind(this)
+
+        this.dialog = null
+    }
+
+    createErrorDialog(text) {
+        this.createDialog(new ErrorDialog(this, text))
+    }
+
+    createDialog(dialog = null) {
+        this.dialog = dialog
+        this.dialog.setCloseCallback((handle) => {
+            handle.removeDialog()
+        })
+        this.canvasHandler.addElement(this.dialog)
+    }
+
+    removeDialog() {
+        this.canvasHandler.removeElement(this.dialog)
+        this.dialog = null
     }
 
     init() {
@@ -23,15 +42,14 @@ class AbstractScene {
             response = 'Could not connect to the server'
         }
 
-        handle.dialog = new ErrorDialog(handle, response)
-        handle.dialog.setCloseCallback((handle) => {
-            handle.canvasHandler.removeElement(handle.dialog)
-            handle.dialog = null
-        })
-        handle.canvasHandler.addElement(handle.dialog)
+        handle.createErrorDialog(response)
     }
 
     halt() {
+        if (this.dialog != null) {
+            this.removeDialog()
+        }
+
         window.removeEventListener('keydown', this.eventListener)
         this.manager = null
         this.canvasHandler.isRunning = false
@@ -43,6 +61,17 @@ class AbstractScene {
     onKeyPressed(e) {
         throw "Abstract method for onKeyPressed not implemented"
     }
+
+    superKeyPressed(e) {
+        e.preventDefault()
+
+        if (this.dialog != null) {
+            this.dialog.onKeyPressed(e)
+            return
+        }
+
+        this.onKeyPressed(e)
+    }
 }
 
 class TronGameScene extends AbstractScene {
@@ -51,7 +80,6 @@ class TronGameScene extends AbstractScene {
 
         this.pendingMovements = []
         this.player = new Tron(4, 4)
-        this.dialog = null
         this.map = null
         this.hasGameStarted = false
         this.activePlayer = null
@@ -98,31 +126,29 @@ class TronGameScene extends AbstractScene {
             }
     
             if (handle.hasGameStarted) {
-                handle.dialog = new GameOverDialog(handle, false)
+                handle.createDialog(new GameOverDialog(handle, false))
             } else {
-                handle.dialog = new ErrorDialog(handle, response)
+                handle.createErrorDialog(response)
             }
             handle.dialog.setCloseCallback((handle) => {
                 if (handle.hasGameStarted) {
                     handle.manager.room_id = null
                     handle.manager.changeScene(new RoomListScene(handle.manager))
                 } else {
-                    handle.canvasHandler.removeElement(handle.dialog)
-                    handle.dialog = null
+                    handle.removeDialog()
 
                     if (this.intervalId == null) {
                         this.intervalId = setInterval(this.getStateData.bind(handle), 5000)
                     }
                 }
             })
-            handle.canvasHandler.addElement(handle.dialog)
         })
         .startRequest((handle, data) => {
             let playerTiles = []
             let lineTiles = []
 
             if (handle.hasGameStarted && data['number_of_players'] == 1) {
-                handle.dialog = new GameOverDialog(handle, true)
+                handle.createDialog(new GameOverDialog(handle, true))
 
                 if (this.intervalId != null) {
                     clearInterval(this.intervalId)
@@ -133,8 +159,6 @@ class TronGameScene extends AbstractScene {
                     handle.manager.room_id = null
                     handle.manager.changeScene(new RoomListScene(handle.manager))
                 })
-
-                handle.canvasHandler.addElement(handle.dialog)
 
                 return
             }
@@ -241,11 +265,6 @@ class TronGameScene extends AbstractScene {
     }
 
     onKeyPressed(e) {
-        if (this.dialog != null) {
-            this.dialog.onKeyPressed(e)
-            return
-        }
-
         let lastCoord = null
 
         if (this.pendingMovements.length > 0) {
@@ -276,21 +295,29 @@ class TronGameScene extends AbstractScene {
             this.pendingMovements = []
             this.map.clearPendingMoves()
         } else if (e.keyCode === 13) {
-            let steps = []
+            if (this.pendingMovements.length < 4) {
+                this.createErrorDialog("Must use all four steps")
+            } else {
+                let steps = []
 
-            steps.push({'x': this.player.x + 1, 'y': this.player.y + 1})
+                steps.push({'x': this.player.x + 1, 'y': this.player.y + 1})
 
-            this.pendingMovements.forEach(element => {
-                steps.push({'x': element.x + 1, 'y': element.y + 1})
-            });
+                this.pendingMovements.forEach(element => {
+                    steps.push({'x': element.x + 1, 'y': element.y + 1})
+                });
 
-            new StepDataHandler(this, this.manager.player_id, steps)
-            .setErrorCallback(this.genericErrorHandlerFunction)
-            .startRequest((handle, data) => {
-                this.pendingMovements = []
-                this.map.clearPendingMoves()
-                handle.getStateData()
-            })
+                new StepDataHandler(this, this.manager.player_id, steps)
+                .setErrorCallback(this.genericErrorHandlerFunction)
+                .startRequest((handle, data) => {
+                    this.pendingMovements = []
+                    this.map.clearPendingMoves()
+                    handle.getStateData()
+                })
+            }
+        }
+
+        if (this.pendingMovements.length > 3) {
+            return
         }
 
         if (validMovement > 0 && this.activePlayer == this.manager.player_id) {
@@ -336,7 +363,6 @@ class RoomListScene extends AbstractScene {
         super.init()
 
         this.roomList = new RoomListElem()
-        this.dialog = null
 
         this.canvasHandler.addElement(this.roomList)
 
@@ -348,13 +374,6 @@ class RoomListScene extends AbstractScene {
     }
 
     onKeyPressed(e) {
-        e.preventDefault()
-
-        if (this.dialog != null) {
-            this.dialog.onKeyPressed(e)
-            return
-        }
-
         if (e.keyCode === 38 || e.keyCode === 87) { //UP
             this.roomList.selectPreviousRoom()
         } else if(e.keyCode === 40 || e.keyCode === 83) { //DOWN
@@ -367,7 +386,8 @@ class RoomListScene extends AbstractScene {
             })
         } else if (e.keyCode === 13) {
             if (this.roomList.getSelectedData().protected) {
-                this.dialog = new DialogElem(this)
+                this.createDialog(new DialogElem(this))
+
                 this.dialog.addOption('Pin (4-digits)', OptionType.Password, 4)
                 this.dialog.buttonManager.setButtonCallback(0, (handle, options) => {
                     if (options[0].value.length < 4) {
@@ -384,11 +404,6 @@ class RoomListScene extends AbstractScene {
                 this.dialog.buttonManager.setButtonCallback(1, (handle, options) => {
                     handle.dialog.close()
                 })
-                this.dialog.setCloseCallback((handle) => {
-                    handle.canvasHandler.removeElement(handle.dialog)
-                    handle.dialog = null
-                })
-                this.canvasHandler.addElement(this.dialog)
             } else {
                 new JoinRoomDataHandler(this, this.roomList.getSelectedData().id, this.manager.player_id)
                 .setErrorCallback(this.genericErrorHandlerFunction)
@@ -412,9 +427,9 @@ class RoomDetailScene extends AbstractScene {
     constructor(manager) {
         super(manager)
 
-        this.dialog = null
         this.intervalId = null
         this.mapList = null
+        this.isPlayerReady = false
 
         this.getRoomData()
     }
@@ -446,6 +461,12 @@ class RoomDetailScene extends AbstractScene {
             if (this.mapList != null) {
                 this.mapList.clearVotes()
                 this.mapList.setVotes(data['votes'])
+
+                data['votes'].forEach(element => {
+                    if (Object.keys(element)[0] == handle.manager.player_id) {
+                        this.isPlayerReady = true
+                    }
+                });
             }
 
             if (this.intervalId == null) {
@@ -456,7 +477,8 @@ class RoomDetailScene extends AbstractScene {
 
     setButtonCallbacks() {
         this.playerList.buttonManager.setButtonCallback(3, (handle) => {
-            handle.dialog = new DialogElem(handle)
+            handle.createDialog(new DialogElem(handle))
+
             handle.dialog.addOption('Count (0-3)', OptionType.ComputerNumber, 1)
             handle.dialog.buttonManager.setButtonCallback(0, (handle, options) => {
                 if (options[0].value.length < 1) {
@@ -468,14 +490,10 @@ class RoomDetailScene extends AbstractScene {
             handle.dialog.buttonManager.setButtonCallback(1, (handle, options) => {
                 handle.dialog.close()
             })
-            handle.dialog.setCloseCallback((handle) => {
-                handle.canvasHandler.removeElement(handle.dialog)
-                handle.dialog = null
-            })
-            handle.canvasHandler.addElement(handle.dialog)
         })
         this.playerList.buttonManager.setButtonCallback(4, (handle) => {
-            handle.dialog = new DialogElem(handle)
+            handle.createDialog(new DialogElem(handle))
+
             handle.dialog.addOption('Pin (4-digits)', OptionType.Password, 4)
             handle.dialog.buttonManager.setButtonCallback(0, (handle, options) => {
                 if (options[0].value.length < 4) {
@@ -493,11 +511,6 @@ class RoomDetailScene extends AbstractScene {
             handle.dialog.buttonManager.setButtonCallback(1, (handle, options) => {
                 handle.dialog.close()
             })
-            handle.dialog.setCloseCallback((handle) => {
-                handle.canvasHandler.removeElement(handle.dialog)
-                handle.dialog = null
-            })
-            handle.canvasHandler.addElement(handle.dialog)
         })
     }
 
@@ -520,11 +533,13 @@ class RoomDetailScene extends AbstractScene {
             })
         })
         this.playerList.buttonManager.setButtonCallback(2, (handle) => {
-            new SetReadyDataHandler(handle, handle.manager.player_id, this.mapList.selectedMap + 1)
-            .setErrorCallback(this.genericErrorHandlerFunction)
-            .startRequest((handle, data) => {
-                handle.getRoomData()
-            })
+            if (!this.isPlayerReady) {
+                new SetReadyDataHandler(handle, handle.manager.player_id, this.mapList.selectedMap + 1)
+                .setErrorCallback(this.genericErrorHandlerFunction)
+                .startRequest((handle, data) => {
+                    handle.getRoomData()
+                })
+            }
             //handle.playerList.buttonManager.getSelectedButton().setText('Set Not Ready')
         })
 
@@ -554,11 +569,6 @@ class RoomDetailScene extends AbstractScene {
     }
 
     onKeyPressed(e) {
-        if (this.dialog != null) {
-            this.dialog.onKeyPressed(e)
-            return
-        }
-
         if (e.keyCode === 13) {
             this.playerList.onButtonPushed()
         } else if(e.keyCode === 38) { //UP
@@ -566,9 +576,13 @@ class RoomDetailScene extends AbstractScene {
         } else if(e.keyCode === 40) { //DOWN
             this.playerList.buttonManager.selectNextButton()
         } else if (e.keyCode === 37 || e.keyCode === 65) { //LEFT
-            this.mapList.selectPreviousMap()
+            if (!this.isPlayerReady) {
+                this.mapList.selectPreviousMap()
+            }
         } else if(e.keyCode === 39 || e.keyCode === 68) { //RIGHT
-            this.mapList.selectNextMap()
+            if (!this.isPlayerReady) {
+                this.mapList.selectNextMap()
+            }
         }
     }   
 }
@@ -577,7 +591,8 @@ class InitialScene extends AbstractScene {
     constructor(manager) {
         super(manager)
 
-        this.dialog = new DialogElem(this, false)
+        this.createDialog(new DialogElem(this, false))
+
         this.dialog.addOption('Name', OptionType.String, 20)
         this.dialog.buttonManager.setButtonCallback(0, (handle, options) => {
             if (options[0].value.length == 0) {
@@ -588,23 +603,13 @@ class InitialScene extends AbstractScene {
             .setErrorCallback(this.genericErrorHandlerFunction)
             .startRequest((handle, data) => {
                 handle.manager.player_id = data['id']
-                handle.dialog.close()
                 handle.manager.changeScene(new RoomListScene(handle.manager))
             })
         })
-        this.dialog.setCloseCallback((handle) => {
-            handle.canvasHandler.removeElement(handle.dialog)
-            handle.dialog = null
-        })
-        this.canvasHandler.addElement(this.dialog)
         this.canvasHandler.addElement(new TitleTextElem('Welcome to Labyritron! Select a display name!'))
     }
 
     onKeyPressed(e) {
-        if (this.dialog != null) {
-            this.dialog.onKeyPressed(e)
-            return
-        }
     }
 }
 

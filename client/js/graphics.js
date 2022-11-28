@@ -912,7 +912,7 @@ class PlayerListElem extends AbstractUiElem {
             if (this.buttonManager.buttons.length < 4) {
                 this.buttonManager.addButton('Set Computer Count')
                 this.buttonManager.addButton(this.buttonText)
-                
+
                 return true
             }
         } else {
@@ -1085,6 +1085,9 @@ class MapListElem extends AbstractUiElem {
             ctx.fillRect(startX + size / 2 - fontSize, startY + size / 2 - fontSize, fontSize * 2, fontSize * 2)
 
             ctx.fillStyle = Colors.LightUi
+
+            ctx.strokeRect(startX + size / 2 - fontSize, startY + size / 2 - fontSize, fontSize * 2, fontSize * 2)
+
             ctx.shadowBlur = 2
 
             let votes = 0
@@ -1097,7 +1100,11 @@ class MapListElem extends AbstractUiElem {
                 });
             }
 
+            ctx.textBaseline = 'middle'
+
             ctx.fillText(votes, startX + size / 2, startY + size / 2)
+
+            ctx.textBaseline = 'alphabetic'
         }
     }
 }
