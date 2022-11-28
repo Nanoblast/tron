@@ -606,7 +606,7 @@ class InitialScene extends AbstractScene {
                 handle.manager.changeScene(new RoomListScene(handle.manager))
             })
         })
-        this.canvasHandler.addElement(new TitleTextElem('Welcome to Labyritron! Select a display name!'))
+        this.canvasHandler.addElement(new TitleTextElem('Welcome to Labyritron! Select a display name!\nKeyboard only!'))
     }
 
     onKeyPressed(e) {

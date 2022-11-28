@@ -1164,7 +1164,12 @@ class TitleTextElem extends AbstractUiElem {
         ctx.textAlign = 'center'
         let fontSize = window.innerHeight / 40
         ctx.font = fontSize + 'px Arial'
-        ctx.fillText(this.text, window.innerWidth / 2, window.innerHeight / 8)
+
+        let lines = this.text.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], window.innerWidth / 2, window.innerHeight / 8 + (i * (fontSize + 2)));
+        }
     }
 }
 
