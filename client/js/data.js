@@ -46,7 +46,7 @@ class Room {
 class AbstractDataHandler {
     constructor(handle, endpoint, type = 'GET') {
         this.handle = handle
-        this.baseUrl = "http://172.23.198.143:5000/"
+        this.baseUrl = "http://127.0.0.1:5000/"
         this.data = null
         this.params = null
         this.endpoint = endpoint
@@ -127,7 +127,7 @@ class GetRoomDataHandler extends AbstractDataHandler {
 class JoinRoomDataHandler extends AbstractDataHandler {
     constructor(handle, room_id, player_id, password = null) {
         super(handle, 'room/join', 'POST')
-        
+
         this.data = {'room': {'id': room_id}, 'player': {'id': player_id}}
 
         if (password != null) {
