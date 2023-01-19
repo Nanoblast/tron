@@ -10,7 +10,7 @@ The game is on open source recreation of the 90's classic tactical game. However
 The server is based on Flask, written in Python. To run the server you must have Python 3.6 environment.
 
 * First install the dependencies with pip package manager. The collection of requirements is colledted the requirements.txt file. To install the dependencies run the following command: ``` pip install -r requirements.txt ```
-* Once the dependencies are installed run the server with the following command: ``` python apy.py --port port ```. The server should serve on localhost:port. By default it starts on localhost:5000. If you change that be sure to track it down in ``` client/js/data.js ```
+* Once the dependencies are installed run the server with the following command: ``` python api.py --port port ```. The server should serve on localhost:port. By default it starts on localhost:5000. If you change that be sure to track it down in ``` client/js/data.js ```
 
 ## Running the game
 
